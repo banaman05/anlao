@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>An Lão</title>
+<link rel="icon" href="/assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Giao diện cho người cao tuổi
+   Chữ rất to, nút lớn, màu tương phản cao, không dùng chữ mảnh
+   ============================================================ */
+:root{
+  --blue:#14507F;
+  --blue-light:#E3EEF7;
+  --teal:#1F7A6D;
+  --teal-light:#DFF2EF;
+  --amber:#B06A10;
+  --amber-light:#FCF0DC;
+  --ink:#14201F;
+  --ink-soft:#3E5257;
+  --paper:#FFFFFF;
+  --bg:#F4F1E9;
+  --line:#C9D3D6;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:'Be Vietnam Pro', system-ui, sans-serif;
+  font-size:23px; font-weight:500; line-height:1.55;
+}
+.shell{max-width:840px; margin:0 auto; padding:26px 22px 120px;}
+
+/* ---------- đầu trang ---------- */
+.top{
+  display:flex; justify-content:space-between; align-items:center;
+  padding-bottom:22px; border-bottom:3px solid var(--line); margin-bottom:28px; gap:16px;
+}
+.top .hello{font-size:31px; font-weight:700; line-height:1.25;}
+.top .date{font-size:21px; color:var(--ink-soft); margin-top:5px;}
+.top img{width:56px; height:56px; flex-shrink:0;}
+
+/* ---------- ô lớn ---------- */
+.block{
+  background:var(--paper); border:3px solid var(--line);
+  border-radius:18px; padding:26px; margin-bottom:22px;
+}
+.block h2{font-size:27px; font-weight:700; margin:0 0 18px;}
+
+/* ---------- nhắc nhở ---------- */
+.reminder{
+  display:flex; align-items:center; gap:20px;
+  padding:22px; border-radius:14px; margin-bottom:14px;
+  background:var(--blue-light); border:3px solid transparent;
+}
+.reminder.next{border-color:var(--blue); background:var(--paper);}
+.reminder.medicine{background:var(--blue-light);}
+.reminder.exercise{background:var(--teal-light);}
+.reminder.water, .reminder.checkup{background:var(--amber-light);}
+.reminder .time{
+  font-size:34px; font-weight:700; min-width:118px; line-height:1;
+}
+.reminder.medicine .time{color:var(--blue);}
+.reminder.exercise .time{color:var(--teal);}
+.reminder.water .time, .reminder.checkup .time{color:var(--amber);}
+.reminder .what{font-size:25px; font-weight:600;}
+.reminder .detail{font-size:20px; color:var(--ink-soft); margin-top:5px;}
+.reminder .speak{
+  margin-left:auto; background:var(--paper); border:3px solid var(--line);
+  border-radius:12px; width:64px; height:64px; font-size:27px; cursor:pointer; flex-shrink:0;
+}
+.reminder .speak:active{background:var(--blue-light);}
+
+/* ---------- ca chăm sóc hôm nay ---------- */
+.today-care{
+  background:var(--teal-light); border-color:var(--teal);
+}
+.care-row{display:flex; align-items:center; gap:20px;}
+.care-av{
+  width:76px; height:76px; border-radius:50%; background:var(--teal); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:31px; font-weight:700; flex-shrink:0;
+}
+.care-name{font-size:26px; font-weight:700;}
+.care-time{font-size:21px; color:var(--ink-soft); margin-top:4px;}
+
+/* ---------- nút lớn ---------- */
+.big-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+.big-btn{
+  background:var(--paper); border:3px solid var(--line); border-radius:16px;
+  padding:28px 20px; font-size:24px; font-weight:600; cursor:pointer;
+  text-align:center; color:var(--ink); font-family:inherit;
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+}
+.big-btn:active{background:var(--blue-light);}
+.big-btn .ic{font-size:40px; line-height:1;}
+.big-btn.on{background:var(--teal); color:#fff; border-color:var(--teal);}
+.big-btn:focus-visible{outline:4px solid var(--blue); outline-offset:3px;}
+
+/* ---------- nút gọi khẩn ---------- */
+.emergency{
+  position:fixed; left:0; right:0; bottom:0; z-index:40;
+  background:var(--paper); border-top:3px solid var(--line); padding:16px 22px;
+}
+.emergency .inner{max-width:840px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+.call-btn{
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  padding:20px; border-radius:14px; font-size:23px; font-weight:700;
+  text-decoration:none; border:none; cursor:pointer; font-family:inherit;
+}
+.call-family{background:var(--blue); color:#fff;}
+.call-help{background:#A32B1A; color:#fff;}
+
+/* ---------- nghe nhạc ---------- */
+.audio-list{display:grid; gap:14px;}
+.audio-item{
+  display:flex; align-items:center; gap:18px; padding:20px;
+  border:3px solid var(--line); border-radius:14px; cursor:pointer; background:var(--paper);
+  font-size:23px; font-weight:600;
+}
+.audio-item:active{background:var(--amber-light);}
+.audio-item .ic{font-size:32px;}
+
+/* ---------- trạng thái giọng nói ---------- */
+.voice-status{
+  background:var(--teal); color:#fff; border-radius:14px; padding:20px;
+  font-size:22px; font-weight:600; text-align:center; margin-bottom:22px;
+}
+
+.logout-link{
+  display:block; text-align:center; font-size:20px; color:var(--ink-soft);
+  margin-top:28px; text-decoration:underline; background:none; border:none;
+  font-family:inherit; width:100%; cursor:pointer;
+}
+
+@media (max-width:600px){
+  body{font-size:21px;}
+  .shell{padding:20px 16px 130px;}
+  .top .hello{font-size:26px;}
+  .big-grid{grid-template-columns:1fr;}
+  .reminder{flex-wrap:wrap; gap:14px;}
+  .reminder .time{min-width:auto; font-size:30px;}
+  .reminder .speak{margin-left:0;}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none !important;} }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="top">
+    <div>
+      <div class="hello" id="hello">Xin chào</div>
+      <div class="date" id="date"></div>
+    </div>
+    <img src="/assets/logo.png" alt="An Lão">
+  </div>
+
+  <div id="voiceStatus"></div>
+
+  <!-- Ca chăm sóc hôm nay -->
+  <div id="careBox"></div>
+
+  <!-- Nhắc nhở -->
+  <div class="block">
+    <h2>Nhắc nhở hôm nay</h2>
+    <div id="reminders">Đang tải…</div>
+  </div>
+
+  <!-- Nút lớn -->
+  <div class="block">
+    <h2>Bạn muốn làm gì?</h2>
+    <div class="big-grid">
+      <button class="big-btn" id="voiceBtn" onclick="toggleVoice()">
+        <span class="ic">🎤</span><span>Nói để điều khiển</span>
+      </button>
+      <button class="big-btn" onclick="readReminders()">
+        <span class="ic">🔊</span><span>Đọc nhắc nhở</span>
+      </button>
+      <button class="big-btn" onclick="showSection('audio')">
+        <span class="ic">🎵</span><span>Nghe nhạc, radio</span>
+      </button>
+      <button class="big-btn" onclick="showSection('exercise')">
+        <span class="ic">🧘</span><span>Bài tập nhẹ</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Nhạc và radio -->
+  <div class="block" id="audioBox" style="display:none">
+    <h2>Nghe cho vui</h2>
+    <div class="audio-list">
+      <div class="audio-item" onclick="playAudio('dan ca')"><span class="ic">🎶</span>Nhạc dân ca</div>
+      <div class="audio-item" onclick="playAudio('radio')"><span class="ic">📻</span>Radio tin tức</div>
+      <div class="audio-item" onclick="tellStory()"><span class="ic">📖</span>Nghe kể chuyện ngắn</div>
+      <div class="audio-item" onclick="playAudio('thien')"><span class="ic">🌿</span>Nhạc thiền thư giãn</div>
+    </div>
+  </div>
+
+  <!-- Bài tập -->
+  <div class="block" id="exerciseBox" style="display:none">
+    <h2>Bài tập nhẹ nhàng</h2>
+    <div class="audio-list" id="exerciseList"></div>
+  </div>
+
+  <button class="logout-link" onclick="Auth.logout()">Thoát khỏi tài khoản</button>
+</div>
+
+<!-- Gọi nhanh -->
+<div class="emergency">
+  <div class="inner">
+    <button class="call-btn call-family" onclick="callFamily()">📞 Gọi người nhà</button>
+    <a class="call-btn call-help" href="tel:115">🚑 Gọi cấp cứu 115</a>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+const user = Auth.guard('elder');
+let elder = null, reminders = [], todayCare = null, listening = false, recognition = null;
+
+document.getElementById('hello').textContent = `Chào ${user.full_name.split(' ').slice(-1)[0]}`;
+document.getElementById('date').textContent =
+  new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+/* ===================== ĐỌC BẰNG GIỌNG NÓI ===================== */
+
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'vi-VN';
+  u.rate = 0.88;   // chậm hơn bình thường cho dễ nghe
+  u.pitch = 1;
+  speechSynthesis.speak(u);
+}
+
+/* ===================== TẢI DỮ LIỆU ===================== */
+
+async function load() {
+  const me = await api.get('/auth/me');
+  elder = me.elder;
+  if (!elder) {
+    document.getElementById('reminders').innerHTML =
+      '<div style="font-size:21px">Chưa có hồ sơ. Nhờ người nhà thiết lập giúp nhé.</div>';
+    return;
+  }
+
+  const [rems, bookings] = await Promise.all([
+    api.get(`/elders/${elder.id}/reminders`),
+    api.get('/bookings')
+  ]);
+
+  reminders = rems.filter(r => r.active);
+  const today = new Date().toISOString().slice(0, 10);
+  todayCare = bookings.find(b =>
+    b.start_at.slice(0, 10) === today && ['confirmed', 'in_progress'].includes(b.status));
+
+  paintCare();
+  paintReminders();
+  paintExercises();
+}
+
+function paintCare() {
+  const box = document.getElementById('careBox');
+  if (!todayCare) {
+    box.innerHTML = `
+      <div class="block">
+        <h2>Hôm nay</h2>
+        <div style="font-size:23px; color:var(--ink-soft)">
+          Hôm nay không có ai đến chăm sóc. Nếu cần, bấm nút gọi người nhà ở phía dưới.
+        </div>
+      </div>`;
+    return;
+  }
+  const nm = todayCare.caregiver_name || 'Chăm sóc viên';
+  box.innerHTML = `
+    <div class="block today-care">
+      <h2>${todayCare.status === 'in_progress' ? 'Đang có người ở bên cạnh' : 'Hôm nay có người đến'}</h2>
+      <div class="care-row">
+        <div class="care-av">${nm.trim().split(/\s+/).slice(-1)[0][0].toUpperCase()}</div>
+        <div>
+          <div class="care-name">${esc(nm)}</div>
+          <div class="care-time">Từ ${fmtTime(todayCare.start_at)} đến ${fmtTime(todayCare.end_at)}</div>
+        </div>
+        <button class="speak" style="margin-left:auto; background:#fff; border:3px solid var(--line); border-radius:12px; width:64px; height:64px; font-size:27px; cursor:pointer"
+                onclick="speak('Hôm nay ${esc(nm)} đến chăm sóc bạn, từ ${fmtTime(todayCare.start_at)} đến ${fmtTime(todayCare.end_at)}')"
+                aria-label="Đọc to">🔊</button>
+      </div>
+    </div>`;
+}
+
+function paintReminders() {
+  const box = document.getElementById('reminders');
+  if (!reminders.length) {
+    box.innerHTML = '<div style="font-size:22px; color:var(--ink-soft)">Hôm nay không có nhắc nhở nào.</div>';
+    return;
+  }
+
+  // Tìm nhắc nhở gần nhất còn lại trong ngày để làm nổi bật
+  const now = new Date().getHours() * 60 + new Date().getMinutes();
+  const toMin = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const upcoming = reminders.filter(r => toMin(r.time_of_day) >= now);
+  const nextId = upcoming.length ? upcoming[0].id : null;
+
+  box.innerHTML = reminders.map(r => `
+    <div class="reminder ${r.type} ${r.id === nextId ? 'next' : ''}">
+      <div class="time">${esc(r.time_of_day)}</div>
+      <div>
+        <div class="what">${esc(r.title)}</div>
+        ${r.detail ? `<div class="detail">${esc(r.detail)}</div>` : ''}
+      </div>
+      <button class="speak" onclick="speak('${esc(r.title)}. ${esc(r.detail || '')}')" aria-label="Đọc to">🔊</button>
+    </div>`).join('');
+}
+
+function readReminders() {
+  if (!reminders.length) return speak('Hôm nay bạn không có nhắc nhở nào.');
+  const text = 'Hôm nay bạn có ' + reminders.length + ' việc cần nhớ. ' +
+    reminders.map(r => `${r.time_of_day.replace(':', ' giờ ')}, ${r.title}`).join('. ');
+  speak(text);
+}
+
+function paintExercises() {
+  const list = [
+    { t: 'Xoay cổ tay và cổ chân', d: 'Xoay nhẹ mỗi bên 10 vòng, thở đều' },
+    { t: 'Nắm và mở bàn tay', d: 'Làm 20 lần mỗi tay, giúp tay linh hoạt hơn' },
+    { t: 'Nâng chân khi ngồi ghế', d: 'Duỗi thẳng chân, giữ 5 giây, đổi bên, làm 10 lần' },
+    { t: 'Hít thở sâu', d: 'Hít vào đếm 4, giữ 2, thở ra đếm 6. Làm 5 lần' },
+    { t: 'Đi bộ trong nhà', d: 'Đi chậm 10 phút, vịn tường hoặc dùng gậy nếu cần' }
+  ];
+  document.getElementById('exerciseList').innerHTML = list.map(e => `
+    <div class="audio-item" onclick="speak('${esc(e.t)}. ${esc(e.d)}')">
+      <span class="ic">🧘</span>
+      <div>
+        <div>${esc(e.t)}</div>
+        <div style="font-size:19px; color:var(--ink-soft); font-weight:500">${esc(e.d)}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* ===================== ĐIỀU KHIỂN BẰNG GIỌNG NÓI ===================== */
+
+function toggleVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    speak('Thiết bị này chưa hỗ trợ điều khiển bằng giọng nói.');
+    return setVoiceStatus('Thiết bị này chưa hỗ trợ điều khiển bằng giọng nói.');
+  }
+  if (listening) return stopVoice();
+
+  recognition = new SR();
+  recognition.lang = 'vi-VN';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => {
+    listening = true;
+    document.getElementById('voiceBtn').classList.add('on');
+    setVoiceStatus('Đang nghe… hãy nói: "đọc nhắc nhở", "nghe nhạc", "bài tập" hoặc "gọi người nhà".');
+  };
+  recognition.onresult = (e) => handleCommand(e.results[0][0].transcript.toLowerCase());
+  recognition.onerror = () => { setVoiceStatus('Chưa nghe rõ. Bạn thử nói lại nhé.'); stopVoice(); };
+  recognition.onend = () => stopVoice();
+
+  recognition.start();
+}
+
+function stopVoice() {
+  listening = false;
+  document.getElementById('voiceBtn').classList.remove('on');
+  try { recognition?.stop(); } catch { /* đã dừng rồi */ }
+}
+
+function setVoiceStatus(text) {
+  document.getElementById('voiceStatus').innerHTML =
+    text ? `<div class="voice-status">${esc(text)}</div>` : '';
+  if (text) setTimeout(() => {
+    if (!listening) document.getElementById('voiceStatus').innerHTML = '';
+  }, 6000);
+}
+
+/** Nhận diện câu lệnh đơn giản bằng từ khoá tiếng Việt */
+function handleCommand(text) {
+  setVoiceStatus(`Bạn vừa nói: "${text}"`);
+
+  if (text.includes('nhắc') || text.includes('thuốc')) return readReminders();
+  if (text.includes('nhạc') || text.includes('radio') || text.includes('hát')) {
+    showSection('audio'); return speak('Đây là danh sách nhạc và radio.');
+  }
+  if (text.includes('tập') || text.includes('thể dục') || text.includes('vận động')) {
+    showSection('exercise'); return speak('Đây là các bài tập nhẹ nhàng cho bạn.');
+  }
+  if (text.includes('gọi') && (text.includes('nhà') || text.includes('con'))) return callFamily();
+  if (text.includes('kể chuyện') || text.includes('truyện')) return tellStory();
+  if (text.includes('hôm nay') || text.includes('ai đến')) {
+    return speak(todayCare
+      ? `Hôm nay ${todayCare.caregiver_name} đến chăm sóc bạn, từ ${fmtTime(todayCare.start_at)}.`
+      : 'Hôm nay không có ai đến chăm sóc.');
+  }
+
+  speak('Bạn có thể nói: đọc nhắc nhở, nghe nhạc, bài tập, hoặc gọi người nhà.');
+}
+
+/* ===================== CÁC HÀNH ĐỘNG ===================== */
+
+function showSection(which) {
+  document.getElementById('audioBox').style.display = which === 'audio' ? 'block' : 'none';
+  document.getElementById('exerciseBox').style.display = which === 'exercise' ? 'block' : 'none';
+  document.getElementById(which === 'audio' ? 'audioBox' : 'exerciseBox')
+    .scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function playAudio(kind) {
+  // Chỗ này nối với dịch vụ phát nhạc thật khi triển khai
+  const names = { 'dan ca': 'nhạc dân ca', radio: 'radio tin tức', thien: 'nhạc thiền' };
+  speak(`Đang mở ${names[kind] || 'nhạc'} cho bạn.`);
+  setVoiceStatus(`Đang phát ${names[kind] || 'nhạc'}. Bấm lại để đổi bài.`);
+}
+
+const STORIES = [
+  'Ngày xưa có một người nông dân hiền lành, mỗi sáng đều ra đồng từ sớm. Một hôm ông nhặt được con chim nhỏ bị thương bên bờ ruộng, mang về nhà chăm sóc suốt mùa đông. Sang xuân, chim khỏe lại và bay đi, nhưng năm nào cũng quay về hót trước sân nhà ông.',
+  'Có hai anh em sống cạnh nhau, mỗi mùa gặt đều lén mang lúa sang kho của người kia vì sợ anh em mình thiếu. Mãi rồi hai người gặp nhau giữa đường trong đêm, tay ai cũng ôm bó lúa. Họ đứng cười, rồi ôm lấy nhau.',
+  'Một cụ già trồng cây xoài trước ngõ. Người qua đường hỏi trồng làm gì khi cụ chẳng còn kịp ăn quả. Cụ chỉ cười, nói rằng hồi nhỏ cụ đã ăn xoài từ cây người khác trồng.'
+];
+
+function tellStory() {
+  const story = STORIES[Math.floor(Math.random() * STORIES.length)];
+  speak(story);
+  setVoiceStatus('Đang kể chuyện cho bạn nghe.');
+}
+
+function callFamily() {
+  // Khi triển khai thật sẽ lấy số điện thoại người nhà từ hồ sơ
+  speak('Đang gọi cho người nhà của bạn.');
+  setVoiceStatus('Đang gọi cho người nhà…');
+}
+
+load().catch(() => {
+  document.getElementById('reminders').innerHTML =
+    '<div style="font-size:21px">Chưa tải được thông tin. Bạn thử lại sau nhé.</div>';
+});
+</script>
+</body>
+</html>
