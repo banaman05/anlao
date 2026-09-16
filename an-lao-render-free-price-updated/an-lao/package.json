@@ -1,0 +1,30 @@
+{
+  "name": "an-lao",
+  "version": "1.0.0",
+  "description": "An Lao - Nen tang ket noi cham soc nguoi cao tuoi",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server/seed.js && node server/index.js",
+    "dev": "node --watch server/index.js",
+    "seed": "node server/seed.js"
+  },
+  "keywords": [
+    "elderly-care",
+    "caregiver",
+    "healthcare",
+    "vietnam"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "better-sqlite3": "^12.4.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

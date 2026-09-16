@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ca làm việc — An Lão</title>
+<link rel="icon" href="/assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app.css">
+<style>
+  .route{background:var(--teal-soft); border-radius:var(--radius-lg); padding:20px 22px; margin-bottom:22px;}
+  .route h3{font-size:18px; margin-bottom:4px;}
+  .route .stops{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; align-items:center;}
+  .stop{background:var(--paper); border-radius:var(--radius); padding:10px 14px; font-size:14px;}
+  .stop .t{font-weight:600;}
+  .stop .p{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+  .arrow{color:var(--teal-deep); font-size:16px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Ca làm việc</h1>
+        <div class="sub">Đăng ký ca phù hợp với lịch rảnh và khu vực của bạn</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="tabs">
+        <button class="tab" data-t="open">Ca đang cần người</button>
+        <button class="tab active" data-t="mine">Ca của tôi</button>
+      </div>
+      <div id="routeBox"></div>
+      <div id="list"><div class="muted">Đang tải…</div></div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+const me = Auth.guard('caregiver');
+mountNav('shifts');
+
+let tab = new URLSearchParams(location.search).get('tab') || 'mine';
+let myShifts = [], openShifts = [], myProfile = null;
+
+/** Khoảng cách đường chim bay giữa hai toạ độ, dùng để gợi ý lộ trình */
+function distanceKm(a, b) {
+  if (!a?.lat || !b?.lat) return null;
+  const R = 6371, rad = (d) => d * Math.PI / 180;
+  const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 +
+            Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(h)) * 10) / 10;
+}
+
+async function load() {
+  [myShifts, openShifts, myProfile] = await Promise.all([
+    api.get('/bookings'),
+    api.get('/bookings/open'),
+    api.get('/auth/me').then(u => u.caregiver)
+  ]);
+  paint();
+}
+
+/** Gợi ý thứ tự đi giữa các ca trong ngày để giảm thời gian di chuyển */
+function renderRoute() {
+  const box = document.getElementById('routeBox');
+  const today = new Date().toISOString().slice(0, 10);
+  const todayShifts = myShifts
+    .filter(b => b.start_at.slice(0, 10) === today && ['confirmed', 'in_progress'].includes(b.status))
+    .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
+
+  if (tab !== 'mine' || todayShifts.length < 1) { box.innerHTML = ''; return; }
+
+  let total = 0, from = myProfile;
+  const stops = todayShifts.map(b => {
+    const d = distanceKm(from, b);
+    if (d) total += d;
+    from = b;
+    return { b, d };
+  });
+
+  box.innerHTML = `
+    <div class="route">
+      <h3>Lộ trình hôm nay</h3>
+      <div class="muted" style="font-size:14px">
+        ${todayShifts.length} điểm dừng${total ? ` · khoảng ${total.toFixed(1)} km di chuyển` : ''}</div>
+      <div class="stops">
+        <div class="stop"><div class="t">Xuất phát</div><div class="p">${esc(myProfile?.district || 'Nhà bạn')}</div></div>
+        ${stops.map(s => `
+          <span class="arrow">→</span>
+          <div class="stop">
+            <div class="t">${fmtTime(s.b.start_at)} · ${esc(s.b.elder_name)}</div>
+            <div class="p">${esc(s.b.address || '')}${s.d ? ' · ~' + s.d + ' km' : ''}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function paint() {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.t === tab));
+  renderRoute();
+
+  const rows = tab === 'open' ? openShifts : myShifts;
+  const list = document.getElementById('list');
+
+  if (!rows.length) {
+    list.innerHTML = tab === 'open'
+      ? `<div class="empty"><strong>Chưa có ca nào đang cần người</strong>Ca mới sẽ xuất hiện ở đây khi gia đình đặt lịch.</div>`
+      : `<div class="empty"><strong>Bạn chưa nhận ca nào</strong>
+          Xem các ca đang cần người để đăng ký.
+          <div style="margin-top:16px"><button class="btn btn-teal btn-sm" onclick="switchTab('open')">Tìm ca</button></div></div>`;
+    return;
+  }
+
+  list.innerHTML = rows.map(b => {
+    const d = new Date(b.start_at.replace(' ', 'T'));
+    const km = distanceKm(myProfile, b);
+    const progress = b.task_total ? Math.round(b.task_done / b.task_total * 100) : 0;
+
+    const action = tab === 'open'
+      ? (b.applied
+          ? '<span class="badge badge-confirmed">Đã đăng ký</span>'
+          : `<button class="btn btn-teal btn-sm" onclick="applyShift(${b.id})">Đăng ký nhận</button>`)
+      : `<a href="/app/caregiver/logbook.html?id=${b.id}" class="btn btn-ghost btn-sm">Mở nhật ký</a>`;
+
+    return `
+    <div class="booking">
+      <div class="when"><div class="d">${d.getDate()}</div><div class="m">Th ${d.getMonth() + 1}</div></div>
+      <div>
+        <div class="ttl">${esc(b.elder_name)} · ${esc(b.package_name || MODE_LABEL[b.mode])}</div>
+        <div class="meta">
+          ${fmtTime(b.start_at)} – ${fmtTime(b.end_at)} (${b.hours} giờ) ·
+          ${esc(b.address || '')}${km ? ` · cách ~${km} km` : ''}
+        </div>
+        ${b.note ? `<div class="faint" style="margin-top:5px">Ghi chú: ${esc(b.note)}</div>` : ''}
+        ${tab === 'mine' && b.task_total ? `
+          <div style="margin-top:9px; max-width:250px">
+            <div class="bar"><span style="width:${progress}%"></span></div>
+            <div class="faint" style="margin-top:4px">${b.task_done}/${b.task_total} đầu việc</div>
+          </div>` : ''}
+      </div>
+      <div class="side">
+        ${tab === 'mine' ? statusBadge(b.status) : ''}
+        <div class="amt">${fmtMoney(b.total_amount)}</div>
+        <div style="margin-top:8px">${action}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function switchTab(t) { tab = t; paint(); }
+
+document.querySelectorAll('.tab').forEach(t =>
+  t.addEventListener('click', () => switchTab(t.dataset.t)));
+
+async function applyShift(id) {
+  try {
+    await api.post(`/bookings/${id}/apply`, {});
+    toast('Đã gửi đăng ký. Gia đình sẽ xem và chọn người phù hợp.');
+    openShifts = await api.get('/bookings/open');
+    paint();
+  } catch (e) { toast(e.message); }
+}
+
+load().catch(e => toast(e.message));
+</script>
+</body>
+</html>

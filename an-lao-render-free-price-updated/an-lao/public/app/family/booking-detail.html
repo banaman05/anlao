@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chi tiết ca chăm sóc — An Lão</title>
+<link rel="icon" href="/assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app.css">
+<style>
+  .back{font-size:14px; color:var(--ink-soft); display:inline-block; margin-bottom:8px;}
+  .back:hover{color:var(--blue-deep);}
+  .kv{display:grid; grid-template-columns:150px 1fr; gap:10px 16px; font-size:14.5px;}
+  .kv dt{color:var(--ink-soft);}
+  .kv dd{margin:0;}
+  .applicant{
+    display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:center;
+    padding:16px 0; border-bottom:1px solid var(--line-soft);
+  }
+  .applicant:last-child{border-bottom:none;}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <a href="/app/family/booking.html" class="back">← Tất cả ca chăm sóc</a>
+        <h1 id="title">Chi tiết ca</h1>
+        <div class="sub" id="subtitle"></div>
+      </div>
+      <div id="headActions"></div>
+    </div>
+    <div class="content" id="body"><div class="muted">Đang tải…</div></div>
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+Auth.guard('family');
+mountNav('booking');
+
+const bookingId = new URLSearchParams(location.search).get('id');
+let booking = null;
+let refreshTimer = null;
+
+async function load() {
+  booking = await api.get(`/bookings/${bookingId}`);
+  render();
+
+  // Ca đang diễn ra thì tự làm mới để thấy cập nhật mới nhất
+  clearInterval(refreshTimer);
+  if (booking.status === 'in_progress') {
+    refreshTimer = setInterval(async () => {
+      booking = await api.get(`/bookings/${bookingId}`);
+      render();
+    }, 20000);
+  }
+}
+
+/** Vẽ lộ trình GPS bằng SVG, không cần thư viện bản đồ bên ngoài */
+function drawRoute(points, destLat, destLng) {
+  if (!points.length) {
+    return `<div class="empty" style="height:100%; display:flex; flex-direction:column; justify-content:center">
+      <strong>Chưa có dữ liệu di chuyển</strong>Lộ trình hiện khi chăm sóc viên bắt đầu ca.</div>`;
+  }
+
+  const all = [...points, { lat: destLat, lng: destLng }].filter(p => p.lat && p.lng);
+  const lats = all.map(p => p.lat), lngs = all.map(p => p.lng);
+  const pad = 0.004;
+  const minLat = Math.min(...lats) - pad, maxLat = Math.max(...lats) + pad;
+  const minLng = Math.min(...lngs) - pad, maxLng = Math.max(...lngs) + pad;
+
+  const x = (lng) => ((lng - minLng) / (maxLng - minLng || 1)) * 560 + 20;
+  const y = (lat) => 260 - ((lat - minLat) / (maxLat - minLat || 1)) * 240;
+
+  const path = points.map((p, i) => `${i ? 'L' : 'M'}${x(p.lng).toFixed(1)},${y(p.lat).toFixed(1)}`).join(' ');
+  const last = points[points.length - 1];
+
+  return `
+  <svg viewBox="0 0 600 280" preserveAspectRatio="xMidYMid meet" role="img"
+       aria-label="Lộ trình di chuyển của chăm sóc viên">
+    <defs>
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M40 0 L0 0 0 40" fill="none" stroke="rgba(28,116,184,.13)" stroke-width="1"/>
+      </pattern>
+    </defs>
+    <rect width="600" height="280" fill="url(#grid)"/>
+    <path d="${path}" fill="none" stroke="#1C74B8" stroke-width="3"
+          stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 5"/>
+    ${destLat && destLng ? `
+      <circle cx="${x(destLng)}" cy="${y(destLat)}" r="11" fill="#3FBFAE" opacity=".25"/>
+      <circle cx="${x(destLng)}" cy="${y(destLat)}" r="6" fill="#2C9385"/>
+      <text x="${x(destLng)}" y="${y(destLat) - 15}" font-size="12" fill="#2C9385"
+            text-anchor="middle" font-family="sans-serif">Nhà</text>` : ''}
+    <circle cx="${x(last.lng)}" cy="${y(last.lat)}" r="13" fill="#1C74B8" opacity=".2"/>
+    <circle cx="${x(last.lng)}" cy="${y(last.lat)}" r="7" fill="#1C74B8"/>
+    <text x="${x(last.lng)}" y="${y(last.lat) - 17}" font-size="12" fill="#14507F"
+          text-anchor="middle" font-family="sans-serif">Chăm sóc viên</text>
+  </svg>`;
+}
+
+function render() {
+  const b = booking;
+  document.getElementById('title').textContent = `${b.elder_name} · ${b.package_name || MODE_LABEL[b.mode]}`;
+  document.getElementById('subtitle').innerHTML =
+    `Mã ${esc(b.code)} · ${fmtRelative(b.start_at)} – ${fmtTime(b.end_at)} ${statusBadge(b.status)}`;
+
+  /* --- nút ở thanh trên --- */
+  const acts = [];
+  if (b.status === 'completed' && !b.review) acts.push(`<button class="btn btn-primary btn-sm" onclick="openReview()">Đánh giá ca này</button>`);
+  if (['pending', 'confirmed'].includes(b.status)) acts.push(`<button class="btn btn-danger btn-sm" onclick="cancelBooking()">Huỷ ca</button>`);
+  if (b.payment?.status === 'pending' && b.payment.method !== 'cash')
+    acts.push(`<button class="btn btn-teal btn-sm" onclick="payNow()">Thanh toán ngay</button>`);
+  document.getElementById('headActions').innerHTML = `<div class="row">${acts.join('')}</div>`;
+
+  const progress = b.task_total ? Math.round(b.task_done / b.task_total * 100) : 0;
+
+  document.getElementById('body').innerHTML = `
+  <div class="stack">
+    ${b.status === 'in_progress' ? `
+      <div class="card" style="border-color:var(--teal)">
+        <div class="card-head"><h3>Theo dõi thời gian thực</h3>
+          <span class="badge badge-progress">Đang cập nhật</span></div>
+        <div class="map-box">${drawRoute(b.tracking, b.lat, b.lng)}</div>
+        <div class="faint" style="margin-top:12px">
+          ${b.tracking.length ? 'Vị trí gần nhất lúc ' + fmtTime(b.tracking[b.tracking.length - 1].recorded_at) : ''}
+        </div>
+      </div>` : ''}
+
+    <div class="grid-2">
+      <!-- Thông tin ca -->
+      <div class="card">
+        <div class="card-head"><h3>Thông tin ca làm</h3></div>
+        <dl class="kv">
+          <dt>Người được chăm sóc</dt><dd>${esc(b.elder_name)}</dd>
+          <dt>Gói dịch vụ</dt><dd>${esc(b.package_name || '—')}</dd>
+          <dt>Hình thức</dt><dd>${MODE_LABEL[b.mode]}</dd>
+          <dt>Thời gian</dt><dd>${fmtDateTime(b.start_at)} – ${fmtTime(b.end_at)} (${b.hours} giờ)</dd>
+          <dt>Địa chỉ</dt><dd>${esc(b.address) || '—'}</dd>
+          <dt>Ghi chú</dt><dd>${esc(b.note) || '—'}</dd>
+          <dt>Chi phí</dt><dd style="font-weight:600">${fmtMoney(b.total_amount)}</dd>
+          <dt>Thanh toán</dt><dd>${PAY_METHOD[b.payment?.method] || '—'} ·
+            <span class="badge ${b.payment?.status === 'paid' ? 'badge-paid' : 'badge-pending'}">${PAY_LABEL[b.payment?.status] || '—'}</span></dd>
+        </dl>
+      </div>
+
+      <!-- Chăm sóc viên -->
+      <div class="card">
+        <div class="card-head"><h3>Chăm sóc viên</h3></div>
+        ${b.caregiver_name ? `
+          <div class="row" style="margin-bottom:16px">
+            ${avatar(b.caregiver_name, b.caregiver_color, 'avatar-lg')}
+            <div>
+              <div style="font-weight:600; font-size:16px">${esc(b.caregiver_name)}</div>
+              <a href="/app/family/caregivers.html?id=${b.caregiver_id}" class="faint">Xem hồ sơ đầy đủ</a>
+            </div>
+          </div>
+          ${b.review ? `
+            <div style="padding-top:16px; border-top:1px solid var(--line-soft)">
+              <div class="stars">${stars(b.review.rating)}</div>
+              <div class="muted" style="font-size:14.5px; margin-top:6px">${esc(b.review.comment) || ''}</div>
+            </div>` : ''}
+        ` : `
+          <div class="empty" style="padding:28px 16px">
+            <strong>Đang chờ chăm sóc viên nhận ca</strong>
+            Bạn sẽ thấy danh sách người đăng ký ngay bên dưới.
+          </div>`}
+      </div>
+    </div>
+
+    ${!b.caregiver_id ? `<div class="card" id="applicantsCard">
+      <div class="card-head"><h3>Chăm sóc viên đăng ký nhận ca</h3></div>
+      <div id="applicants" class="muted">Đang tải…</div>
+    </div>` : ''}
+
+    <div class="grid-2">
+      <!-- Nhật ký công việc -->
+      <div class="card">
+        <div class="card-head"><h3>Nhật ký công việc</h3>
+          <span class="faint">${b.task_done}/${b.task_total} hoàn thành</span></div>
+        ${b.task_total ? `<div class="bar" style="margin-bottom:14px"><span style="width:${progress}%"></span></div>` : ''}
+        ${b.tasks.length ? b.tasks.map(t => `
+          <div class="task ${t.done ? 'done' : ''}">
+            <input type="checkbox" ${t.done ? 'checked' : ''} disabled>
+            <div>
+              <div class="tt">${esc(t.title)}</div>
+              <div class="tm">${t.due_time ? 'Dự kiến ' + esc(t.due_time) : ''}
+                ${t.done_at ? ' · xong lúc ' + fmtTime(t.done_at) : ''}</div>
+            </div>
+          </div>`).join('') : '<div class="faint">Chưa có đầu việc nào.</div>'}
+      </div>
+
+      <!-- Dòng thời gian -->
+      <div class="card">
+        <div class="card-head"><h3>Cập nhật từ ca làm</h3></div>
+        ${b.updates.length ? `<div class="timeline">${b.updates.map(u => `
+          <div class="tl-item ${u.type}">
+            <div class="tl-time">${fmtRelative(u.created_at)}</div>
+            <div class="tl-body">${esc(u.content)}</div>
+            ${u.author_name ? `<div class="tl-author">${esc(u.author_name)}</div>` : ''}
+          </div>`).join('')}</div>` :
+          '<div class="faint">Chưa có cập nhật nào. Chăm sóc viên sẽ gửi tình hình trong ca làm.</div>'}
+      </div>
+    </div>
+  </div>`;
+
+  if (!b.caregiver_id) loadApplicants();
+}
+
+async function loadApplicants() {
+  const rows = await api.get(`/bookings/${bookingId}/applications`);
+  document.getElementById('applicants').innerHTML = rows.length ? rows.map(a => `
+    <div class="applicant">
+      ${avatar(a.full_name, a.avatar_color)}
+      <div>
+        <div class="row" style="gap:8px">
+          <span style="font-weight:600">${esc(a.full_name)}</span>
+          ${a.verified ? '<span class="badge badge-verified">Đã xác minh</span>' : ''}
+        </div>
+        <div class="faint">${a.years_experience || 0} năm kinh nghiệm ·
+          ${esc(a.district || '')} ·
+          <span class="stars">${stars(a.rating_avg)}</span> ${a.rating_count ? `(${a.rating_count})` : '(chưa có đánh giá)'}</div>
+        ${a.message ? `<div class="muted" style="font-size:14px; margin-top:6px">${esc(a.message)}</div>` : ''}
+        <div class="chips" style="margin-top:8px">${(a.specialties || []).map(s => `<span class="chip chip-teal">${esc(s)}</span>`).join('')}</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="assign(${a.caregiver_id})">Chọn người này</button>
+    </div>`).join('') :
+    '<div class="faint">Chưa có ai đăng ký nhận ca này. Thường mất vài giờ để có người phù hợp.</div>';
+}
+
+async function assign(caregiverId) {
+  try {
+    await api.post(`/bookings/${bookingId}/assign`, { caregiver_id: caregiverId });
+    toast('Đã chọn chăm sóc viên cho ca này');
+    load();
+  } catch (e) { toast(e.message); }
+}
+
+async function cancelBooking() {
+  const m = openModal(`
+    <h3>Huỷ ca chăm sóc?</h3>
+    <p class="modal-sub">Chăm sóc viên sẽ được thông báo. Bạn có thể đặt lại ca mới bất cứ lúc nào.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-bg').close()">Giữ lại ca</button>
+      <button class="btn btn-danger" id="ok">Huỷ ca</button>
+    </div>`);
+  m.querySelector('#ok').onclick = async () => {
+    m.close();
+    await api.put(`/bookings/${bookingId}/status`, { status: 'cancelled' });
+    toast('Đã huỷ ca');
+    load();
+  };
+}
+
+async function payNow() {
+  const m = openModal(`
+    <h3>Thanh toán ca chăm sóc</h3>
+    <p class="modal-sub">Số tiền cần trả: <strong>${fmtMoney(booking.total_amount)}</strong></p>
+    <div class="field"><label>Phương thức</label>
+      <select id="pm">
+        <option value="card">Thẻ tín dụng</option>
+        <option value="transfer">Chuyển khoản</option>
+        <option value="cash">Tiền mặt khi kết thúc ca</option>
+      </select></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-bg').close()">Để sau</button>
+      <button class="btn btn-teal" id="ok">Xác nhận thanh toán</button>
+    </div>`);
+  m.querySelector('#ok').onclick = async () => {
+    const method = m.querySelector('#pm').value;
+    m.close();
+    try {
+      const r = await api.post(`/payments/${booking.payment.id}/pay`, { method });
+      toast(r.message || 'Đã ghi nhận thanh toán');
+      load();
+    } catch (e) { toast(e.message); }
+  };
+}
+
+function openReview() {
+  let rating = 5;
+  const m = openModal(`
+    <h3>Đánh giá ca chăm sóc</h3>
+    <p class="modal-sub">Phản hồi của bạn giúp nền tảng ưu tiên ghép nối người phù hợp hơn cho lần sau.</p>
+    <div class="field"><label>Mức độ hài lòng</label>
+      <div class="star-pick" id="sp">${[1,2,3,4,5].map(i =>
+        `<button data-v="${i}" class="${i <= 5 ? 'on' : ''}" aria-label="${i} sao">★</button>`).join('')}</div></div>
+    <div class="field"><label>Nhận xét</label>
+      <textarea id="cmt" placeholder="Chăm sóc viên làm việc thế nào? Có điều gì cần cải thiện?"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-bg').close()">Để sau</button>
+      <button class="btn btn-primary" id="ok">Gửi đánh giá</button>
+    </div>`);
+
+  m.querySelectorAll('#sp button').forEach(btn => btn.addEventListener('click', () => {
+    rating = Number(btn.dataset.v);
+    m.querySelectorAll('#sp button').forEach(b2 => b2.classList.toggle('on', Number(b2.dataset.v) <= rating));
+  }));
+
+  m.querySelector('#ok').onclick = async () => {
+    try {
+      await api.post('/reviews', { booking_id: Number(bookingId), rating, comment: m.querySelector('#cmt').value.trim() });
+      m.close();
+      toast('Cảm ơn bạn đã đánh giá');
+      load();
+    } catch (e) { toast(e.message); }
+  };
+}
+
+load().catch(e => {
+  document.getElementById('body').innerHTML = `<div class="alert alert-error">${esc(e.message)}</div>`;
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đăng nhập — An Lão</title>
+<link rel="icon" href="/assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  body{display:flex; align-items:center; justify-content:center; min-height:100vh; padding:32px 20px;}
+  .auth-box{width:100%; max-width:430px;}
+  .auth-brand{display:flex; align-items:center; justify-content:center; gap:11px; margin-bottom:28px;}
+  .auth-brand img{width:40px; height:40px;}
+  .auth-brand span{font-family:'Fraunces', serif; font-size:26px; font-weight:600;}
+  .auth-card{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-lg); padding:32px; box-shadow:var(--shadow);}
+  .auth-card h1{font-size:25px; margin-bottom:6px;}
+  .auth-card .lead{color:var(--ink-soft); font-size:14.5px; margin-bottom:26px;}
+  .auth-foot{text-align:center; margin-top:22px; font-size:14.5px; color:var(--ink-soft);}
+  .auth-foot a{color:var(--blue-deep); font-weight:600;}
+  .demo{margin-top:22px; padding:16px 18px; background:var(--blue-soft); border-radius:var(--radius); font-size:13.5px; color:var(--blue-deep);}
+  .demo b{display:block; margin-bottom:7px;}
+  .demo code{background:rgba(255,255,255,.7); padding:1px 6px; border-radius:3px; cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="auth-box">
+  <a href="/" class="auth-brand"><img src="/assets/logo.png" alt=""><span>An Lão</span></a>
+  <div class="auth-card">
+    <h1>Đăng nhập</h1>
+    <p class="lead">Nhập email hoặc số điện thoại đã đăng ký.</p>
+    <div id="msg"></div>
+    <div class="field">
+      <label for="identifier">Email hoặc số điện thoại</label>
+      <input type="text" id="identifier" autocomplete="username" placeholder="giadinh@demo.vn">
+    </div>
+    <div class="field">
+      <label for="password">Mật khẩu</label>
+      <input type="password" id="password" autocomplete="current-password" placeholder="••••••">
+    </div>
+    <button class="btn btn-primary btn-block" id="submitBtn">Đăng nhập</button>
+    <div class="demo">
+      <b>Tài khoản dùng thử — bấm để điền nhanh</b>
+      Gia đình: <code data-id="giadinh@demo.vn">giadinh@demo.vn</code><br>
+      Chăm sóc viên: <code data-id="ha@demo.vn">ha@demo.vn</code><br>
+      Người cao tuổi: <code data-id="0903000001">0903000001</code><br>
+      Mật khẩu chung: <code>123456</code>
+    </div>
+  </div>
+  <p class="auth-foot">Chưa có tài khoản? <a href="/register.html">Đăng ký ngay</a></p>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+  if (Auth.token && Auth.user) location.href = Auth.homeFor(Auth.user.role);
+
+  const msg = document.getElementById('msg');
+  const btn = document.getElementById('submitBtn');
+
+  document.querySelectorAll('.demo code[data-id]').forEach(el => {
+    el.addEventListener('click', () => {
+      document.getElementById('identifier').value = el.dataset.id;
+      document.getElementById('password').value = '123456';
+    });
+  });
+
+  async function login() {
+    const identifier = document.getElementById('identifier').value.trim();
+    const password = document.getElementById('password').value;
+    if (!identifier || !password) {
+      msg.innerHTML = '<div class="alert alert-error">Nhập đầy đủ thông tin đăng nhập</div>';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Đang đăng nhập…';
+    try {
+      const data = await api.post('/auth/login', { identifier, password });
+      Auth.save(data.token, data.user);
+      location.href = Auth.homeFor(data.user.role);
+    } catch (e) {
+      msg.innerHTML = `<div class="alert alert-error">${esc(e.message)}</div>`;
+      btn.disabled = false; btn.textContent = 'Đăng nhập';
+    }
+  }
+
+  btn.addEventListener('click', login);
+  document.querySelectorAll('input').forEach(i =>
+    i.addEventListener('keydown', e => { if (e.key === 'Enter') login(); }));
+</script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tìm chăm sóc viên — An Lão</title>
+<link rel="icon" href="/assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app.css">
+<style>
+  .filters{display:grid; grid-template-columns:1fr 200px 200px auto; gap:12px; margin-bottom:26px; align-items:end;}
+  .filters .field{margin:0;}
+  @media (max-width:860px){ .filters{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Tìm chăm sóc viên</h1>
+        <div class="sub">Xem hồ sơ, chứng chỉ và đánh giá trước khi quyết định</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="filters">
+        <div class="field"><label for="q">Tìm theo tên</label>
+          <input type="text" id="q" placeholder="Nhập tên chăm sóc viên"></div>
+        <div class="field"><label for="district">Khu vực</label>
+          <select id="district"><option value="">Tất cả khu vực</option></select></div>
+        <div class="field"><label for="specialty">Chuyên môn</label>
+          <select id="specialty"><option value="">Tất cả chuyên môn</option></select></div>
+        <div class="field"><label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+          <input type="checkbox" id="verified" style="width:17px;height:17px;accent-color:var(--teal-deep)">
+          <span>Chỉ người đã xác minh</span></label></div>
+      </div>
+      <div class="grid-3" id="list"></div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+Auth.guard('family');
+mountNav('caregivers');
+
+let all = [];
+
+async function load() {
+  all = await api.get('/caregivers');
+
+  // Dựng bộ lọc từ chính dữ liệu trả về
+  const districts = [...new Set(all.map(c => c.district).filter(Boolean))].sort();
+  const specialties = [...new Set(all.flatMap(c => c.specialties))].sort();
+  document.getElementById('district').innerHTML =
+    '<option value="">Tất cả khu vực</option>' + districts.map(d => `<option>${esc(d)}</option>`).join('');
+  document.getElementById('specialty').innerHTML =
+    '<option value="">Tất cả chuyên môn</option>' + specialties.map(s => `<option>${esc(s)}</option>`).join('');
+
+  paint();
+  const id = new URLSearchParams(location.search).get('id');
+  if (id) openProfile(Number(id));
+}
+
+function paint() {
+  const q = document.getElementById('q').value.toLowerCase().trim();
+  const district = document.getElementById('district').value;
+  const specialty = document.getElementById('specialty').value;
+  const onlyVerified = document.getElementById('verified').checked;
+
+  const rows = all.filter(c =>
+    (!q || c.full_name.toLowerCase().includes(q)) &&
+    (!district || c.district === district) &&
+    (!specialty || c.specialties.includes(specialty)) &&
+    (!onlyVerified || c.verified));
+
+  document.getElementById('list').innerHTML = rows.length ? rows.map(c => `
+    <div class="cg-card" onclick="openProfile(${c.id})" style="cursor:pointer">
+      <div class="cg-head">
+        ${avatar(c.full_name, c.avatar_color)}
+        <div>
+          <div class="cg-name">${esc(c.full_name)}</div>
+          <div class="cg-sub">${c.years_experience} năm kinh nghiệm${c.district ? ' · ' + esc(c.district) : ''}</div>
+        </div>
+      </div>
+      <div class="row" style="gap:8px">
+        <span class="stars">${stars(c.rating_avg)}</span>
+        <span class="faint">${c.rating_count ? c.rating_avg + ' (' + c.rating_count + ' đánh giá)' : 'Chưa có đánh giá'}</span>
+      </div>
+      <div class="chips">
+        ${c.specialties.slice(0, 3).map(s => `<span class="chip chip-teal">${esc(s)}</span>`).join('')}
+        ${c.verified ? '<span class="chip">Đã xác minh</span>' : ''}
+      </div>
+      <p class="faint" style="line-height:1.5">${esc((c.bio || '').slice(0, 110))}${(c.bio || '').length > 110 ? '…' : ''}</p>
+    </div>`).join('') :
+    `<div class="empty" style="grid-column:1/-1"><strong>Không tìm thấy chăm sóc viên phù hợp</strong>
+      Thử bỏ bớt điều kiện lọc.</div>`;
+}
+
+async function openProfile(id) {
+  const c = await api.get(`/caregivers/${id}`);
+  const DAY = {2:'T2',3:'T3',4:'T4',5:'T5',6:'T6',7:'T7',8:'CN'};
+  openModal(`
+    <div class="row" style="margin-bottom:18px">
+      ${avatar(c.full_name, c.avatar_color, 'avatar-lg')}
+      <div>
+        <h3>${esc(c.full_name)}</h3>
+        <div class="muted" style="font-size:14.5px">${c.years_experience} năm kinh nghiệm
+          ${c.district ? ' · ' + esc(c.district) : ''}${c.city ? ', ' + esc(c.city) : ''}</div>
+        <div class="row" style="gap:8px; margin-top:6px">
+          <span class="stars">${stars(c.rating_avg)}</span>
+          <span class="faint">${c.rating_count ? c.rating_avg + '/5 · ' + c.rating_count + ' đánh giá' : 'Chưa có đánh giá'}</span>
+          ${c.verified ? '<span class="badge badge-verified">Đã xác minh</span>' : ''}
+        </div>
+      </div>
+    </div>
+
+    <p style="font-size:14.5px; margin-bottom:18px">${esc(c.bio) || 'Chưa có giới thiệu.'}</p>
+
+    <div class="field"><label>Chuyên môn</label>
+      <div class="chips">${c.specialties.length ? c.specialties.map(s => `<span class="chip chip-teal">${esc(s)}</span>`).join('') : '<span class="faint">Chưa cập nhật</span>'}</div></div>
+
+    <div class="field"><label>Chứng chỉ</label>
+      <div class="chips">${c.certificates.length ? c.certificates.map(s => `<span class="chip">${esc(s)}</span>`).join('') : '<span class="faint">Chưa cập nhật</span>'}</div></div>
+
+    <div class="field"><label>Ngày nhận ca trong tuần</label>
+      <div class="chips">${c.available_days.length ? c.available_days.map(d => `<span class="chip">${DAY[d] || d}</span>`).join('') : '<span class="faint">Chưa cập nhật</span>'}</div></div>
+
+    ${c.reviews.length ? `
+      <div class="field"><label>Đánh giá gần đây</label>
+        ${c.reviews.map(r => `
+          <div style="padding:12px 0; border-bottom:1px solid var(--line-soft)">
+            <div class="row" style="gap:8px">
+              <span class="stars">${stars(r.rating)}</span>
+              <span class="faint">${esc(r.reviewer)} · ${fmtDate(r.created_at)}</span>
+            </div>
+            ${r.comment ? `<div style="font-size:14.5px; margin-top:5px">${esc(r.comment)}</div>` : ''}
+          </div>`).join('')}
+      </div>` : ''}
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-bg').close()">Đóng</button>
+      <a href="/app/family/booking.html?new=1" class="btn btn-primary">Đặt ca chăm sóc</a>
+    </div>`);
+}
+
+['q','district','specialty','verified'].forEach(id =>
+  document.getElementById(id).addEventListener('input', paint));
+
+load().catch(e => toast(e.message));
+</script>
+</body>
+</html>
