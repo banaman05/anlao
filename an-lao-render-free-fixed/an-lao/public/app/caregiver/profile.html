@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hồ sơ nghề nghiệp — An Lão</title>
+<link rel="icon" href="/assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app.css">
+<style>
+  .day-pick{display:flex; gap:8px; flex-wrap:wrap;}
+  .day-opt{
+    width:48px; height:48px; border:1.5px solid var(--line); border-radius:var(--radius);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    font-size:14px; font-weight:600; background:var(--paper);
+  }
+  .day-opt.on{border-color:var(--teal-deep); background:var(--teal-soft); color:var(--teal-deep);}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Hồ sơ nghề nghiệp</h1>
+        <div class="sub">Hồ sơ càng đầy đủ, gia đình càng dễ chọn bạn</div>
+      </div>
+      <button class="btn btn-primary btn-sm" id="saveBtn">Lưu thay đổi</button>
+    </div>
+    <div class="content" id="body"><div class="muted">Đang tải…</div></div>
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+Auth.guard('caregiver');
+mountNav('profile');
+
+const DAYS = [[2,'T2'],[3,'T3'],[4,'T4'],[5,'T5'],[6,'T6'],[7,'T7'],[8,'CN']];
+let profile = null, days = [], specialties = [], certificates = [];
+
+async function load() {
+  const me = await api.get('/auth/me');
+  profile = me.caregiver || {};
+  days = profile.available_days || [];
+  specialties = profile.specialties || [];
+  certificates = profile.certificates || [];
+
+  document.getElementById('body').innerHTML = `
+  <div class="stack">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><h3>Giới thiệu bản thân</h3>
+          ${profile.verified ? '<span class="badge badge-verified">Đã xác minh</span>' :
+            '<span class="badge badge-pending">Chờ xác minh</span>'}</div>
+        <div class="field"><label for="bio">Giới thiệu</label>
+          <textarea id="bio" placeholder="Bạn có kinh nghiệm gì, học ở đâu, thế mạnh khi chăm sóc người cao tuổi…">${esc(profile.bio) || ''}</textarea></div>
+        <div class="field"><label for="exp">Số năm kinh nghiệm</label>
+          <input type="number" id="exp" value="${profile.years_experience || 0}" min="0"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Khu vực nhận ca</h3></div>
+        <div class="field"><label for="city">Tỉnh, thành phố</label>
+          <input type="text" id="city" value="${esc(profile.city) || ''}" placeholder="Hà Nội"></div>
+        <div class="field"><label for="district">Quận, huyện</label>
+          <input type="text" id="district" value="${esc(profile.district) || ''}" placeholder="Cầu Giấy"></div>
+        <div class="field"><label>Ngày trong tuần bạn nhận ca</label>
+          <div class="day-pick" id="dayPick">${DAYS.map(([v, l]) =>
+            `<div class="day-opt ${days.includes(v) ? 'on' : ''}" data-v="${v}">${l}</div>`).join('')}</div>
+          <div class="hint">Hệ thống ưu tiên gợi ý ca rơi vào những ngày này.</div></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><h3>Chuyên môn</h3>
+          <button class="btn btn-ghost btn-sm" onclick="addItem('specialties')">Thêm</button></div>
+        <div class="chips" id="specBox"></div>
+        <div class="faint" style="margin-top:14px">Ví dụ: phục hồi sau tai biến, chăm sóc Alzheimer, vật lý trị liệu.</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Chứng chỉ</h3>
+          <button class="btn btn-ghost btn-sm" onclick="addItem('certificates')">Thêm</button></div>
+        <div class="chips" id="certBox"></div>
+        <div class="faint" style="margin-top:14px">Chứng chỉ giúp bạn được gắn nhãn đã xác minh và ưu tiên gợi ý.</div>
+      </div>
+    </div>
+  </div>`;
+
+  document.querySelectorAll('#dayPick .day-opt').forEach(el => el.addEventListener('click', () => {
+    const v = Number(el.dataset.v);
+    days = days.includes(v) ? days.filter(d => d !== v) : [...days, v];
+    el.classList.toggle('on');
+  }));
+
+  paintChips();
+}
+
+function paintChips() {
+  const render = (arr, field, boxId, cls) => {
+    document.getElementById(boxId).innerHTML = arr.length ? arr.map((s, i) =>
+      `<span class="chip ${cls}">${esc(s)}
+        <button onclick="removeItem('${field}', ${i})" style="background:none;border:none;cursor:pointer;color:inherit;margin-left:4px;opacity:.6">×</button>
+      </span>`).join('') : '<span class="faint">Chưa có mục nào.</span>';
+  };
+  render(specialties, 'specialties', 'specBox', 'chip-teal');
+  render(certificates, 'certificates', 'certBox', '');
+}
+
+function addItem(field) {
+  const isSpec = field === 'specialties';
+  const m = openModal(`
+    <h3>Thêm ${isSpec ? 'chuyên môn' : 'chứng chỉ'}</h3>
+    <div class="field"><label>Nội dung</label>
+      <input type="text" id="v" placeholder="${isSpec ? 'Phục hồi sau tai biến' : 'Chứng chỉ hành nghề điều dưỡng'}"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-bg').close()">Huỷ</button>
+      <button class="btn btn-primary" id="ok">Thêm</button>
+    </div>`);
+  m.querySelector('#v').focus();
+  m.querySelector('#ok').onclick = () => {
+    const v = m.querySelector('#v').value.trim();
+    if (!v) return;
+    (isSpec ? specialties : certificates).push(v);
+    m.close(); paintChips();
+  };
+}
+
+function removeItem(field, i) {
+  if (field === 'specialties') specialties.splice(i, 1);
+  else certificates.splice(i, 1);
+  paintChips();
+}
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  try {
+    await api.put('/caregivers/me/profile', {
+      bio: document.getElementById('bio').value.trim(),
+      years_experience: Number(document.getElementById('exp').value) || 0,
+      city: document.getElementById('city').value.trim(),
+      district: document.getElementById('district').value.trim(),
+      specialties, certificates,
+      available_days: days.sort((a, b) => a - b)
+    });
+    toast('Đã lưu hồ sơ');
+  } catch (e) { toast(e.message); }
+});
+
+load().catch(e => toast(e.message));
+</script>
+</body>
+</html>

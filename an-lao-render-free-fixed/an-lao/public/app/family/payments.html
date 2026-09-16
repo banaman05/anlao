@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thanh toán — An Lão</title>
+<link rel="icon" href="/assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Thanh toán</h1>
+        <div class="sub">Toàn bộ chi phí chăm sóc, không phí ẩn</div>
+      </div>
+    </div>
+    <div class="content stack">
+      <div class="grid-3" id="summary"></div>
+      <div class="card">
+        <div class="card-head"><h3>Lịch sử giao dịch</h3></div>
+        <div id="list"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+Auth.guard('family');
+mountNav('payments');
+
+async function load() {
+  const [summary, rows] = await Promise.all([
+    api.get('/payments/summary'),
+    api.get('/payments')
+  ]);
+
+  document.getElementById('summary').innerHTML = `
+    <div class="stat"><div class="lbl">Đã thanh toán tháng này</div>
+      <div class="val">${fmtMoney(summary.month_paid)}</div></div>
+    <div class="stat"><div class="lbl">Chờ thanh toán</div>
+      <div class="val amber">${fmtMoney(summary.pending_amount)}</div>
+      <div class="note">${summary.pending_count} khoản</div></div>
+    <div class="stat"><div class="lbl">Tổng đã chi</div>
+      <div class="val teal">${fmtMoney(summary.total_paid)}</div>
+      <div class="note">Từ trước tới nay</div></div>`;
+
+  document.getElementById('list').innerHTML = rows.length ? `
+    <table>
+      <tr><th>Ngày</th><th>Ca chăm sóc</th><th>Phương thức</th><th>Trạng thái</th>
+          <th class="text-right">Số tiền</th><th></th></tr>
+      ${rows.map(p => `
+        <tr>
+          <td class="muted">${fmtDate(p.paid_at || p.created_at)}</td>
+          <td>
+            <div style="font-weight:500">${esc(p.elder_name)} · ${esc(p.package_name || MODE_LABEL[p.mode])}</div>
+            <div class="faint">${esc(p.booking_code)}${p.caregiver_name ? ' · ' + esc(p.caregiver_name) : ''}</div>
+          </td>
+          <td class="muted">${PAY_METHOD[p.method]}</td>
+          <td><span class="badge ${p.status === 'paid' ? 'badge-paid' : 'badge-pending'}">${PAY_LABEL[p.status]}</span></td>
+          <td class="text-right mono-num" style="font-weight:600">${fmtMoney(p.amount)}</td>
+          <td class="text-right">${p.status === 'pending' && p.method !== 'cash'
+            ? `<button class="btn btn-teal btn-sm" onclick="pay(${p.id}, ${p.amount})">Trả ngay</button>`
+            : `<a href="/app/family/booking-detail.html?id=${p.booking_id}" class="faint">Chi tiết</a>`}</td>
+        </tr>`).join('')}
+    </table>` :
+    `<div class="empty"><strong>Chưa có giao dịch nào</strong>Giao dịch xuất hiện sau khi bạn đặt ca chăm sóc.</div>`;
+}
+
+function pay(id, amount) {
+  const m = openModal(`
+    <h3>Xác nhận thanh toán</h3>
+    <p class="modal-sub">Số tiền cần trả: <strong>${fmtMoney(amount)}</strong></p>
+    <div class="field"><label>Phương thức</label>
+      <select id="pm">
+        <option value="card">Thẻ tín dụng</option>
+        <option value="transfer">Chuyển khoản</option>
+        <option value="cash">Tiền mặt khi kết thúc ca</option>
+      </select></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-bg').close()">Để sau</button>
+      <button class="btn btn-teal" id="ok">Xác nhận</button>
+    </div>`);
+  m.querySelector('#ok').onclick = async () => {
+    const method = m.querySelector('#pm').value;
+    m.close();
+    try {
+      const r = await api.post(`/payments/${id}/pay`, { method });
+      toast(r.message || 'Đã ghi nhận thanh toán');
+      load();
+    } catch (e) { toast(e.message); }
+  };
+}
+
+load().catch(e => toast(e.message));
+</script>
+</body>
+</html>

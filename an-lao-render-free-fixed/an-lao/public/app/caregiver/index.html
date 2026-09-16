@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tổng quan — An Lão</title>
+<link rel="icon" href="/assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="greeting">Tổng quan</h1>
+        <div class="sub" id="today"></div>
+      </div>
+      <a href="/app/caregiver/shifts.html?tab=open" class="btn btn-teal btn-sm">Tìm ca mới</a>
+    </div>
+
+    <div class="content stack">
+      <div class="grid-4" id="stats"></div>
+      <div id="liveBox"></div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h3>Ca sắp tới của bạn</h3>
+            <a href="/app/caregiver/shifts.html" class="faint">Xem tất cả</a></div>
+          <div id="mine"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Ca đang cần người</h3>
+            <a href="/app/caregiver/shifts.html?tab=open" class="faint">Xem tất cả</a></div>
+          <div id="open"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Đánh giá gần đây từ gia đình</h3></div>
+        <div id="reviews"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+const user = Auth.guard('caregiver');
+mountNav('home');
+
+document.getElementById('greeting').textContent = `Chào ${user.full_name.split(' ').slice(-1)[0]}`;
+document.getElementById('today').textContent =
+  new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+(async function load() {
+  const [stats, mine, open, reviews] = await Promise.all([
+    api.get('/caregivers/me/stats'),
+    api.get('/bookings'),
+    api.get('/bookings/open'),
+    api.get('/reviews/mine')
+  ]);
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="lbl">Thu nhập tháng này</div>
+      <div class="val teal">${fmtMoney(stats.month_revenue)}</div>
+      <div class="note">${stats.month_shifts} ca hoàn thành</div></div>
+    <div class="stat"><div class="lbl">Ca sắp làm</div>
+      <div class="val">${stats.upcoming}</div>
+      <div class="note">Đã xác nhận</div></div>
+    <div class="stat"><div class="lbl">Đánh giá trung bình</div>
+      <div class="val amber">${stats.rating_avg || '—'}</div>
+      <div class="note">${stats.rating_count} lượt đánh giá</div></div>
+    <div class="stat"><div class="lbl">Tổng thu nhập</div>
+      <div class="val">${fmtMoney(stats.total_revenue)}</div>
+      <div class="note">${stats.total_shifts} ca từ trước tới nay</div></div>`;
+
+  // Ca đang làm — hiện nổi bật lên đầu
+  const live = mine.find(b => b.status === 'in_progress');
+  document.getElementById('liveBox').innerHTML = live ? `
+    <div class="card" style="border-color:var(--teal); background:var(--teal-soft)">
+      <div class="row-between">
+        <div>
+          <div style="font-weight:600; font-size:16px">Đang trong ca với ${esc(live.elder_name)}</div>
+          <div class="muted" style="font-size:14px">
+            ${fmtTime(live.start_at)} – ${fmtTime(live.end_at)} · đã xong ${live.task_done}/${live.task_total} đầu việc</div>
+        </div>
+        <a href="/app/caregiver/logbook.html?id=${live.id}" class="btn btn-teal btn-sm">Mở nhật ký ca</a>
+      </div>
+    </div>` : '';
+
+  const upcoming = mine
+    .filter(b => ['confirmed', 'in_progress'].includes(b.status))
+    .sort((a, b) => new Date(a.start_at) - new Date(b.start_at)).slice(0, 4);
+
+  document.getElementById('mine').innerHTML = upcoming.length ? upcoming.map(b => {
+    const d = new Date(b.start_at.replace(' ', 'T'));
+    return `<a href="/app/caregiver/logbook.html?id=${b.id}" class="booking" style="margin-bottom:10px">
+      <div class="when"><div class="d">${d.getDate()}</div><div class="m">Th ${d.getMonth() + 1}</div></div>
+      <div>
+        <div class="ttl">${esc(b.elder_name)}</div>
+        <div class="meta">${fmtTime(b.start_at)} – ${fmtTime(b.end_at)} · ${esc(b.package_name || '')}</div>
+      </div>
+      <div class="side">${statusBadge(b.status)}<div class="amt">${fmtMoney(b.total_amount)}</div></div>
+    </a>`;
+  }).join('') : '<div class="empty"><strong>Chưa có ca nào sắp tới</strong>Đăng ký nhận ca ở mục bên cạnh.</div>';
+
+  document.getElementById('open').innerHTML = open.length ? open.slice(0, 4).map(b => {
+    const d = new Date(b.start_at.replace(' ', 'T'));
+    return `<div class="booking" style="margin-bottom:10px">
+      <div class="when"><div class="d">${d.getDate()}</div><div class="m">Th ${d.getMonth() + 1}</div></div>
+      <div>
+        <div class="ttl">${esc(b.elder_name)} · ${esc(b.package_name || '')}</div>
+        <div class="meta">${fmtTime(b.start_at)} – ${fmtTime(b.end_at)} · ${esc(b.address || '')}</div>
+      </div>
+      <div class="side">
+        <div class="amt">${fmtMoney(b.total_amount)}</div>
+        ${b.applied ? '<span class="badge badge-confirmed">Đã đăng ký</span>'
+          : `<button class="btn btn-teal btn-sm" style="margin-top:6px" onclick="applyShift(${b.id})">Nhận ca</button>`}
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty"><strong>Chưa có ca trống</strong>Ca mới sẽ xuất hiện ở đây.</div>';
+
+  document.getElementById('reviews').innerHTML = reviews.length ? reviews.slice(0, 5).map(r => `
+    <div style="padding:14px 0; border-bottom:1px solid var(--line-soft)">
+      <div class="row" style="gap:10px">
+        <span class="stars">${stars(r.rating)}</span>
+        <span class="faint">${esc(r.reviewer)} · ${fmtDate(r.created_at)} · ${esc(r.booking_code)}</span>
+      </div>
+      ${r.comment ? `<div style="font-size:14.5px; margin-top:6px">${esc(r.comment)}</div>` : ''}
+    </div>`).join('') :
+    '<div class="faint">Chưa có đánh giá nào. Đánh giá xuất hiện sau khi bạn hoàn thành ca đầu tiên.</div>';
+})().catch(e => toast(e.message));
+
+async function applyShift(id) {
+  try {
+    await api.post(`/bookings/${id}/apply`, {});
+    toast('Đã gửi đăng ký. Gia đình sẽ xem và chọn người phù hợp.');
+    location.reload();
+  } catch (e) { toast(e.message); }
+}
+</script>
+</body>
+</html>

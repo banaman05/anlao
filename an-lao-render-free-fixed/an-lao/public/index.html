@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>An Lão — Kết nối chăm sóc người cao tuổi</title>
+<meta name="description" content="An Lão kết nối gia đình với chăm sóc viên đã xác minh, chăm sóc người cao tuổi tại nhà: hồ sơ sức khoẻ số, đặt lịch, theo dõi thời gian thực.">
+<link rel="icon" href="/assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  /* ---------- đầu trang ---------- */
+  header{
+    position:sticky; top:0; z-index:50;
+    background:rgba(246,242,234,0.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav{display:flex; align-items:center; justify-content:space-between; padding:16px 28px; max-width:1120px; margin:0 auto;}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand img{width:34px; height:34px;}
+  .brand span{font-family:'Fraunces', serif; font-size:22px; font-weight:600;}
+  nav.links{display:flex; gap:30px;}
+  nav.links a{font-size:15px; color:var(--ink-soft);}
+  nav.links a:hover{color:var(--blue-deep);}
+  .nav-right{display:flex; align-items:center; gap:16px;}
+  .nav-right .signin{font-size:14.5px; color:var(--ink-soft); font-weight:500;}
+
+  /* ---------- hero ---------- */
+  .hero{padding:84px 0 92px;}
+  .hero .wrap{display:grid; grid-template-columns:1.1fr 0.9fr; gap:64px; align-items:center;}
+  .eyebrow{color:var(--teal-deep); font-weight:600; font-size:14.5px; margin-bottom:18px; display:flex; align-items:center; gap:10px;}
+  .eyebrow .dot{width:7px; height:7px; border-radius:50%; background:var(--teal);}
+  .hero h1{font-size:46px; letter-spacing:-0.01em; max-width:9.5ch;}
+  .hero .sub{margin-top:22px; font-size:18px; color:var(--ink-soft); max-width:46ch;}
+  .hero-ctas{display:flex; gap:14px; margin-top:34px; flex-wrap:wrap;}
+
+  .hero-art{position:relative; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;}
+  .art-card{
+    position:relative; width:86%; background:var(--paper);
+    border:1px solid var(--line); border-radius:var(--radius-lg);
+    padding:24px; box-shadow:var(--shadow);
+  }
+  .art-card .r{display:flex; align-items:center; gap:14px; padding:13px 0; border-bottom:1px solid var(--line-soft);}
+  .art-card .r:last-child{border-bottom:none;}
+  .art-card .nm{font-weight:600; font-size:14.5px;}
+  .art-card .rl{font-size:13px; color:var(--ink-soft); margin-top:2px;}
+  .art-badge{
+    position:absolute; top:-16px; right:-10px; background:var(--teal); color:#fff;
+    font-size:13px; font-weight:600; padding:9px 16px; border-radius:20px;
+    box-shadow:0 12px 24px -10px rgba(44,147,133,0.5);
+  }
+
+  /* ---------- dải số liệu ---------- */
+  .trust{border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:var(--paper);}
+  .trust .wrap{display:flex; justify-content:space-between; padding:28px; flex-wrap:wrap; gap:20px;}
+  .trust-item{flex:1; min-width:170px;}
+  .trust-item .num{font-family:'Fraunces', serif; font-size:30px; color:var(--blue-deep);}
+  .trust-item .label{font-size:13.5px; color:var(--ink-soft); margin-top:4px;}
+
+  section{padding:92px 0;}
+  .section-head{max-width:620px; margin-bottom:52px;}
+  .section-head .kicker{color:var(--teal-deep); font-weight:600; font-size:14px; margin-bottom:12px;}
+  .section-head h2{font-size:32px;}
+  .section-head p{margin-top:16px; color:var(--ink-soft); font-size:16.5px;}
+
+  /* ---------- ba bước ---------- */
+  .steps{display:grid; grid-template-columns:repeat(3,1fr);}
+  .step{padding:30px 32px 30px 0; border-right:1px solid var(--line);}
+  .step:last-child{border-right:none;}
+  .step .idx{font-family:'Fraunces', serif; font-size:15px; color:var(--teal-deep); margin-bottom:14px;}
+  .step h3{font-size:20px; margin-bottom:10px;}
+  .step p{color:var(--ink-soft); font-size:15px;}
+
+  /* ---------- tính năng ---------- */
+  .feat-list{border-top:1px solid var(--line);}
+  .feat-row{display:grid; grid-template-columns:230px 1fr; gap:40px; padding:32px 0; border-bottom:1px solid var(--line); align-items:start;}
+  .feat-row .tag{font-size:14px; color:var(--ink-soft); padding-top:4px;}
+  .feat-row h3{font-size:21px; margin-bottom:8px;}
+  .feat-row p{color:var(--ink-soft); font-size:15.5px; max-width:60ch;}
+
+  /* ---------- bảng giá ---------- */
+  #bang-gia{background:var(--paper); border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+  .pkg-list{display:grid; gap:0; border-top:1px solid var(--line);}
+  .pkg{display:grid; grid-template-columns:1fr 280px; gap:40px; padding:34px 0; border-bottom:1px solid var(--line);}
+  .pkg h3{font-size:22px; margin-bottom:10px;}
+  .pkg .target{font-size:15px; color:var(--ink); margin-bottom:10px;}
+  .pkg .details{font-size:14.5px; color:var(--ink-soft); max-width:60ch;}
+  .pkg .price{text-align:right;}
+  .pkg .price .main{font-family:'Fraunces', serif; font-size:26px; color:var(--blue-deep); line-height:1.2;}
+  .pkg .price .unit{font-size:13.5px; color:var(--ink-soft); margin-top:3px;}
+  .pkg .price .alt{font-size:14.5px; margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft); color:var(--ink);}
+  .pkg .price .note{font-size:12.5px; color:var(--ink-faint); margin-top:10px; text-align:right;}
+
+  /* ---------- hai luồng người dùng ---------- */
+  .split-grid{display:grid; grid-template-columns:1fr 1fr;}
+  .panel{padding:70px 54px; color:#fff;}
+  .panel.families{background:var(--blue-deep);}
+  .panel.nurses{background:var(--teal-deep);}
+  .panel .tag{font-size:14px; opacity:.85; font-weight:600; margin-bottom:16px;}
+  .panel h3{font-size:28px; color:#fff; max-width:14ch;}
+  .panel p{margin-top:18px; opacity:.92; font-size:15.5px; max-width:40ch;}
+  .panel ul{list-style:none; margin:26px 0 0; padding:0;}
+  .panel li{padding:10px 0 10px 26px; position:relative; font-size:15px; opacity:.95; border-top:1px solid rgba(255,255,255,.16);}
+  .panel li:first-child{border-top:none;}
+  .panel li::before{content:"—"; position:absolute; left:0; opacity:.7;}
+  .panel a.btn-panel{display:inline-block; margin-top:28px; padding:14px 24px; background:#fff; border-radius:var(--radius); font-weight:600; font-size:15px;}
+  .panel.families a.btn-panel{color:var(--blue-deep);}
+  .panel.nurses a.btn-panel{color:var(--teal-deep);}
+
+  /* ---------- đánh giá ---------- */
+  .testi-grid{display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--line);}
+  .testi{padding:30px 32px 30px 0; border-right:1px solid var(--line);}
+  .testi:last-child{border-right:none;}
+  .testi .quote{font-family:'Fraunces', serif; font-size:18px; line-height:1.5;}
+  .testi .who{margin-top:18px; font-size:14px; color:var(--ink-soft);}
+  .testi .who b{color:var(--ink); font-weight:600;}
+
+  .cta-banner{
+    background:var(--blue); color:#fff; border-radius:var(--radius-lg); padding:60px 54px;
+    display:flex; justify-content:space-between; align-items:center; gap:36px; flex-wrap:wrap;
+  }
+  .cta-banner h2{color:#fff; font-size:30px; max-width:16ch;}
+  .cta-banner .btn{background:#fff; color:var(--blue-deep);}
+  .cta-banner .btn:hover{background:var(--sand);}
+
+  footer{border-top:1px solid var(--line); padding:54px 0 38px; background:var(--paper);}
+  .foot-grid{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:40px;}
+  .foot-brand{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .foot-brand img{width:28px; height:28px;}
+  .foot-brand span{font-family:'Fraunces', serif; font-weight:600; font-size:19px;}
+  footer .desc{color:var(--ink-soft); font-size:14.5px; max-width:32ch;}
+  .foot-col h4{font-size:14px; margin-bottom:14px; color:var(--ink-soft); font-weight:600; font-family:'Be Vietnam Pro', sans-serif;}
+  .foot-col a{display:block; font-size:14.5px; padding:6px 0;}
+  .foot-col a:hover{color:var(--blue-deep);}
+  .foot-bottom{margin-top:46px; padding-top:22px; border-top:1px solid var(--line); display:flex; justify-content:space-between; color:var(--ink-soft); font-size:13.5px; flex-wrap:wrap; gap:10px;}
+
+  @media (max-width:860px){
+    nav.links{display:none;}
+    .hero .wrap{grid-template-columns:1fr;}
+    .hero-art{order:-1; max-width:330px; margin:0 auto;}
+    .hero h1{font-size:33px;}
+    .steps, .testi-grid{grid-template-columns:1fr;}
+    .step, .testi{border-right:none; border-bottom:1px solid var(--line); padding:24px 0;}
+    .feat-row, .pkg{grid-template-columns:1fr; gap:10px;}
+    .pkg .price{text-align:left; padding-top:12px;}
+    .pkg .price .note{text-align:left;}
+    .split-grid{grid-template-columns:1fr;}
+    .panel{padding:48px 24px;}
+    .foot-grid{grid-template-columns:1fr 1fr;}
+    .cta-banner{padding:40px 26px;}
+    .cta-banner h2{font-size:24px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <a href="/" class="brand">
+      <img src="/assets/logo.png" alt="An Lão">
+      <span>An Lão</span>
+    </a>
+    <nav class="links">
+      <a href="#cach-hoat-dong">Cách hoạt động</a>
+      <a href="#tinh-nang">Tính năng</a>
+      <a href="#bang-gia">Bảng giá</a>
+      <a href="#cham-soc-vien">Dành cho chăm sóc viên</a>
+    </nav>
+    <div class="nav-right">
+      <a href="/login.html" class="signin">Đăng nhập</a>
+      <a href="/register.html" class="btn btn-primary btn-sm">Bắt đầu</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow"><span class="dot"></span>Nền tảng chăm sóc người cao tuổi</div>
+      <h1>Người thân được chăm sóc, bởi người bạn tin tưởng</h1>
+      <p class="sub">An Lão kết nối gia đình với chăm sóc viên đã xác minh hồ sơ và tay nghề, kèm theo dõi thời gian thực để bạn yên tâm dù ở xa.</p>
+      <div class="hero-ctas">
+        <a href="/register.html?role=family" class="btn btn-primary">Tìm chăm sóc viên</a>
+        <a href="/register.html?role=caregiver" class="btn btn-ghost">Đăng ký làm chăm sóc viên</a>
+      </div>
+    </div>
+    <div class="hero-art">
+      <div class="art-card">
+        <div class="art-badge">Đã xác minh</div>
+        <div class="r">
+          <div class="avatar" style="background:#1C74B8">H</div>
+          <div><div class="nm">Trần Thị Hà</div><div class="rl">Phục hồi sau tai biến · 6 năm</div></div>
+        </div>
+        <div class="r">
+          <div class="avatar" style="background:#3FBFAE">M</div>
+          <div><div class="nm">Lê Văn Minh</div><div class="rl">Vật lý trị liệu · 4 năm</div></div>
+        </div>
+        <div class="r">
+          <div class="avatar" style="background:#E2A045">O</div>
+          <div><div class="nm">Phạm Thị Oanh</div><div class="rl">Chăm sóc Alzheimer · 8 năm</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="trust">
+  <div class="wrap">
+    <div class="trust-item"><div class="num">1.200+</div><div class="label">Chăm sóc viên đã xác minh hồ sơ</div></div>
+    <div class="trust-item"><div class="num">18</div><div class="label">Tỉnh, thành phố đang hoạt động</div></div>
+    <div class="trust-item"><div class="num">4,8/5</div><div class="label">Đánh giá trung bình từ gia đình</div></div>
+    <div class="trust-item"><div class="num">24/7</div><div class="label">Hỗ trợ khi cần chăm sóc viên gấp</div></div>
+  </div>
+</div>
+
+<section id="cach-hoat-dong">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Cách hoạt động</div>
+      <h2>Ba bước để tìm được người chăm sóc phù hợp</h2>
+      <p>Không cần gọi điện dò hỏi nhiều nơi. An Lão giúp gia đình chọn đúng người, đúng nhu cầu, trong vài ngày.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="idx">01</div>
+        <h3>Lập hồ sơ sức khoẻ</h3>
+        <p>Ghi lại bệnh lý nền, đơn thuốc, dị ứng và thói quen sinh hoạt của người thân — chỉ mất vài phút.</p>
+      </div>
+      <div class="step">
+        <div class="idx">02</div>
+        <h3>Đặt lịch và chọn người</h3>
+        <p>Chọn gói dịch vụ, đặt theo giờ, theo ca hay theo tháng. Xem hồ sơ chăm sóc viên đã xác minh rồi quyết định.</p>
+      </div>
+      <div class="step">
+        <div class="idx">03</div>
+        <h3>Theo dõi từng ca chăm sóc</h3>
+        <p>Xem lộ trình di chuyển, ảnh bữa ăn, chỉ số huyết áp và nhịp tim cập nhật ngay trong ca làm.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tinh-nang">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Tính năng</div>
+      <h2>Mọi thứ gia đình cần để yên tâm</h2>
+      <p>Từ hồ sơ y tế đến thanh toán, tất cả nằm trong một nơi và luôn minh bạch.</p>
+    </div>
+    <div class="feat-list">
+      <div class="feat-row">
+        <div class="tag">Hồ sơ sức khoẻ số</div>
+        <div>
+          <h3>Lưu trữ đầy đủ, chia sẻ an toàn</h3>
+          <p>Lịch sử bệnh lý, đơn thuốc, dị ứng, thói quen sinh hoạt và lịch tái khám được lưu ở một nơi. Chỉ chăm sóc viên đang được chỉ định mới xem được, giúp việc chăm sóc chính xác và liền mạch.</p>
+        </div>
+      </div>
+      <div class="feat-row">
+        <div class="tag">Theo dõi thời gian thực</div>
+        <div>
+          <h3>Biết chính xác người thân đang thế nào</h3>
+          <p>Xem lộ trình GPS của chăm sóc viên, ảnh bữa ăn, hoạt động hằng ngày và các chỉ số huyết áp, nhịp tim, giấc ngủ được ghi nhận ngay trong ca làm.</p>
+        </div>
+      </div>
+      <div class="feat-row">
+        <div class="tag">Thanh toán minh bạch</div>
+        <div>
+          <h3>Giá hiện rõ trước khi đặt</h3>
+          <p>Chi phí hiển thị đầy đủ trong lúc đặt lịch, không phí ẩn. Chọn tiền mặt, thẻ tín dụng hoặc chuyển khoản, và xem lại toàn bộ lịch sử chi tiêu bất cứ lúc nào.</p>
+        </div>
+      </div>
+      <div class="feat-row">
+        <div class="tag">Giao diện cho người cao tuổi</div>
+        <div>
+          <h3>Chữ to, nút lớn, điều khiển bằng giọng nói</h3>
+          <p>Màn hình đơn giản với màu tương phản cao, nút bấm lớn và hỗ trợ giọng nói. Nhắc uống thuốc, nhắc lịch khám, kèm nhạc dân ca và radio giúp giảm cảm giác cô đơn.</p>
+        </div>
+      </div>
+      <div class="feat-row">
+        <div class="tag">Đánh giá sau mỗi ca</div>
+        <div>
+          <h3>Chất lượng được giữ bằng phản hồi thật</h3>
+          <p>Gia đình chấm sao và nhận xét ngay sau ca làm. Điểm đánh giá quyết định thứ tự ưu tiên khi hệ thống gợi ý ghép nối chăm sóc viên.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="bang-gia">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Bảng giá</div>
+      <h2>Bốn gói dịch vụ theo mức độ chăm sóc</h2>
+      <p>Giá đã bao gồm toàn bộ chi phí nền tảng. Bạn xem trước tổng tiền trước khi xác nhận đặt lịch.</p>
+    </div>
+    <div class="pkg-list" id="pkgList">
+      <div class="pkg"><div class="muted">Đang tải bảng giá…</div></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:0" id="cham-soc-vien">
+  <div class="split-grid">
+    <div class="panel families">
+      <div class="tag">DÀNH CHO GIA ĐÌNH</div>
+      <h3>Chọn người bạn an tâm giao phó</h3>
+      <p>Xem hồ sơ, chứng chỉ và đánh giá thực tế trước khi quyết định — không trung gian, không phí ẩn.</p>
+      <ul>
+        <li>Hồ sơ chăm sóc viên được xác minh lý lịch</li>
+        <li>Hồ sơ sức khoẻ số chia sẻ an toàn</li>
+        <li>Theo dõi GPS và cập nhật trong ca làm</li>
+        <li>Đặt theo giờ, theo ca hoặc gói tháng</li>
+      </ul>
+      <a href="/register.html?role=family" class="btn-panel">Tạo tài khoản gia đình</a>
+    </div>
+    <div class="panel nurses">
+      <div class="tag">DÀNH CHO CHĂM SÓC VIÊN</div>
+      <h3>Chủ động công việc, thu nhập rõ ràng</h3>
+      <p>Nhận ca phù hợp với chuyên môn và lịch trống của bạn, có nhật ký điện tử hỗ trợ suốt ca làm.</p>
+      <ul>
+        <li>Xem và đăng ký ca theo thời gian rảnh</li>
+        <li>Gợi ý lộ trình tối ưu giữa các hộ gia đình</li>
+        <li>Nhật ký công việc tự sinh theo hồ sơ bệnh</li>
+        <li>Theo dõi thu nhập từng ca, từng tháng</li>
+      </ul>
+      <a href="/register.html?role=caregiver" class="btn-panel">Đăng ký làm chăm sóc viên</a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Gia đình đã tin tưởng</div>
+      <h2>Những chia sẻ từ người đã sử dụng An Lão</h2>
+    </div>
+    <div class="testi-grid">
+      <div class="testi">
+        <p class="quote">"Mẹ tôi bị tai biến, cần người có chuyên môn. Nhờ An Lão, chỉ hai ngày tôi đã tìm được chăm sóc viên phù hợp và tận tâm."</p>
+        <div class="who"><b>Chị Phương Anh</b> — Quận 3, TP.HCM</div>
+      </div>
+      <div class="testi">
+        <p class="quote">"Là chăm sóc viên, tôi thích việc được tự chọn ca theo lịch cá nhân, và tiền công luôn được trả đúng hẹn."</p>
+        <div class="who"><b>Chăm sóc viên Minh Thư</b> — Hà Nội</div>
+      </div>
+      <div class="testi">
+        <p class="quote">"Ba tôi ở một mình, tôi ở xa nên rất lo. Mỗi ngày mở app thấy ảnh bữa ăn và chỉ số huyết áp là yên tâm hẳn."</p>
+        <div class="who"><b>Anh Đức Thịnh</b> — Đà Nẵng</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="cta-banner">
+      <h2>Sẵn sàng tìm người chăm sóc cho người thân?</h2>
+      <a href="/register.html" class="btn">Tạo tài khoản miễn phí</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-brand">
+          <img src="/assets/logo.png" alt="An Lão"><span>An Lão</span>
+        </div>
+        <p class="desc">Nền tảng kết nối gia đình với chăm sóc viên người cao tuổi, tận tâm và đáng tin cậy.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Dịch vụ</h4>
+        <a href="#bang-gia">Gói Đồng Hành</a>
+        <a href="#bang-gia">Gói Phục Hồi</a>
+        <a href="#bang-gia">Gói Chuyên Sâu</a>
+        <a href="#bang-gia">Gói Thủ Thuật Lẻ</a>
+      </div>
+      <div class="foot-col">
+        <h4>Về An Lão</h4>
+        <a href="#cach-hoat-dong">Cách hoạt động</a>
+        <a href="#tinh-nang">Tính năng</a>
+        <a href="#cham-soc-vien">Dành cho chăm sóc viên</a>
+        <a href="/login.html">Đăng nhập</a>
+      </div>
+      <div class="foot-col">
+        <h4>Liên hệ</h4>
+        <a href="tel:19001234">Hotline 1900 1234</a>
+        <a href="mailto:hotro@anlao.vn">hotro@anlao.vn</a>
+        <a href="#">Hà Nội, Việt Nam</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 An Lão. Mọi quyền được bảo lưu.</span>
+      <span>Chính sách bảo mật · Điều khoản sử dụng</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/api.js"></script>
+<script>
+  // Nếu đã đăng nhập thì đổi nút ở đầu trang thành lối vào ứng dụng
+  if (Auth.token && Auth.user) {
+    document.querySelector('.nav-right').innerHTML =
+      `<a href="${Auth.homeFor(Auth.user.role)}" class="btn btn-primary btn-sm">Vào ứng dụng</a>`;
+  }
+
+  // Bảng giá lấy trực tiếp từ API để chỉ cần sửa một nơi khi đổi giá
+  (async () => {
+    try {
+      const packages = await api.get('/packages');
+      document.getElementById('pkgList').innerHTML = packages.map(p => {
+        const perHour = p.price_hour ? `${fmtMoney(p.price_hour)}/giờ` : '';
+        let monthly = '';
+        if (p.price_month) {
+          monthly = p.price_month_max
+            ? `${(p.price_month / 1e6).toFixed(0)} - ${(p.price_month_max / 1e6).toFixed(0)} triệu/tháng`
+            : `${fmtMoney(p.price_month)}/tháng`;
+        }
+        return `
+        <div class="pkg">
+          <div>
+            <h3>${esc(p.name)}</h3>
+            <p class="target">${esc(p.target)}</p>
+            <p class="details">${esc(p.details)}</p>
+          </div>
+          <div class="price">
+            <div class="main">${fmtMoney(p.price_shift)}</div>
+            <div class="unit">mỗi ca ${p.shift_hours} giờ${perHour ? ' · ' + perHour : ''}</div>
+            ${monthly ? `<div class="alt">${monthly}</div>` : ''}
+            ${p.price_note ? `<div class="note">${esc(p.price_note)}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      document.getElementById('pkgList').innerHTML =
+        `<div class="pkg"><div class="muted">Không tải được bảng giá. Thử tải lại trang.</div></div>`;
+    }
+  })();
+</script>
+</body>
+</html>

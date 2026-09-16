@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nhật ký ca làm — An Lão</title>
+<link rel="icon" href="/assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app.css">
+<style>
+  .back{font-size:14px; color:var(--ink-soft); display:inline-block; margin-bottom:8px;}
+  .back:hover{color:var(--blue-deep);}
+  .warn-box{
+    background:var(--danger-soft); border-radius:var(--radius); padding:14px 16px;
+    font-size:14.5px; color:var(--danger); margin-bottom:14px;
+  }
+  .warn-box strong{display:block; margin-bottom:5px;}
+  .info-box{background:var(--blue-soft); border-radius:var(--radius); padding:14px 16px; font-size:14.5px; margin-bottom:12px;}
+  .info-box strong{display:block; margin-bottom:5px; color:var(--blue-deep);}
+  .gps-on{display:inline-flex; align-items:center; gap:7px; font-size:13.5px; color:var(--teal-deep);}
+  .gps-dot{width:8px; height:8px; border-radius:50%; background:var(--teal); }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <a href="/app/caregiver/shifts.html" class="back">← Tất cả ca làm</a>
+        <h1 id="title">Nhật ký ca làm</h1>
+        <div class="sub" id="subtitle"></div>
+      </div>
+      <div id="headActions"></div>
+    </div>
+    <div class="content" id="body"><div class="muted">Đang tải…</div></div>
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+Auth.guard('caregiver');
+mountNav('shifts');
+
+const bookingId = new URLSearchParams(location.search).get('id');
+let booking = null, health = null, gpsWatch = null;
+
+async function load() {
+  booking = await api.get(`/bookings/${bookingId}`);
+  try { health = await api.get(`/elders/${booking.elder_id}/health`); } catch { health = null; }
+  render();
+}
+
+function render() {
+  const b = booking;
+  document.getElementById('title').textContent = `Ca với ${b.elder_name}`;
+  document.getElementById('subtitle').innerHTML =
+    `${fmtRelative(b.start_at)} – ${fmtTime(b.end_at)} · ${esc(b.package_name || '')} ${statusBadge(b.status)}`;
+
+  // Nút bắt đầu / kết thúc ca
+  const acts = [];
+  if (b.status === 'confirmed') acts.push(`<button class="btn btn-teal btn-sm" onclick="startShift()">Bắt đầu ca</button>`);
+  if (b.status === 'in_progress') {
+    acts.push(`<button class="btn btn-ghost btn-sm" onclick="toggleGPS()" id="gpsBtn">${gpsWatch ? 'Tắt chia sẻ vị trí' : 'Chia sẻ vị trí'}</button>`);
+    acts.push(`<button class="btn btn-primary btn-sm" onclick="endShift()">Kết thúc ca</button>`);
+  }
+  document.getElementById('headActions').innerHTML = `<div class="row">${acts.join('')}</div>`;
+
+  const progress = b.task_total ? Math.round(b.task_done / b.task_total * 100) : 0;
+  const allergies = health?.allergies || [];
+  const conditions = health?.conditions || [];
+
+  document.getElementById('body').innerHTML = `
+  <div class="stack">
+    ${b.status === 'in_progress' && gpsWatch ?
+      `<div class="gps-on"><span class="gps-dot"></span>Đang chia sẻ vị trí với gia đình</div>` : ''}
+
+    <div class="grid-2">
+      <!-- Checklist -->
+      <div class="card">
+        <div class="card-head">
+          <h3>Việc cần làm trong ca</h3>
+          <span class="faint">${b.task_done}/${b.task_total} xong</span>
+        </div>
+        ${b.task_total ? `<div class="bar" style="margin-bottom:16px"><span style="width:${progress}%"></span></div>` : ''}
+        ${b.tasks.length ? b.tasks.map(t => `
+          <div class="task ${t.done ? 'done' : ''}">
+            <input type="checkbox" ${t.done ? 'checked' : ''}
+                   ${b.status === 'completed' ? 'disabled' : ''}
+                   onchange="toggleTask(${t.id}, this.checked)">
+            <div style="flex:1">
+              <div class="tt">${esc(t.title)}</div>
+              <div class="tm">${t.due_time ? 'Dự kiến ' + esc(t.due_time) : ''}
+                ${t.done_at ? ' · xong lúc ' + fmtTime(t.done_at) : ''}</div>
+            </div>
+          </div>`).join('') : '<div class="faint">Chưa có đầu việc nào.</div>'}
+        ${b.status !== 'completed' ?
+          `<button class="btn btn-ghost btn-sm btn-block" style="margin-top:16px" onclick="addTask()">Thêm việc phát sinh</button>` : ''}
+      </div>
+
+      <!-- Hồ sơ người được chăm sóc -->
+      <div class="card">
+        <div class="card-head"><h3>Cần lưu ý về ${esc(b.elder_name)}</h3></div>
+        ${allergies.length ? `
+          <div class="warn-box">
+            <strong>Dị ứng và kiêng kỵ</strong>
+            ${allergies.map(a => esc(a)).join(' · ')}
+          </div>` : ''}
+        ${conditions.length ? `
+          <div class="info-box">
+            <strong>Bệnh lý nền</strong>
+            ${conditions.map(c => esc(c)).join(' · ')}
+          </div>` : ''}
+        ${health?.care_notes ? `
+          <div class="info-box"><strong>Lưu ý khi chăm sóc</strong>${esc(health.care_notes)}</div>` : ''}
+        ${health?.mobility ? `
+          <div style="font-size:14.5px; margin-top:12px">
+            <div class="faint">Khả năng vận động</div>${esc(health.mobility)}</div>` : ''}
+        ${health?.habits ? `
+          <div style="font-size:14.5px; margin-top:12px">
+            <div class="faint">Thói quen sinh hoạt</div>${esc(health.habits)}</div>` : ''}
+        ${b.note ? `
+          <div style="font-size:14.5px; margin-top:12px">
+            <div class="faint">Ghi chú từ gia đình</div>${esc(b.note)}</div>` : ''}
+        ${!allergies.length && !conditions.length && !health?.care_notes ?
+          '<div class="faint">Gia đình chưa cập nhật hồ sơ sức khoẻ chi tiết.</div>' : ''}
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Gửi cập nhật -->
+      <div class="card">
+        <div class="card-head"><h3>Gửi cập nhật cho gia đình</h3></div>
+        ${b.status === 'completed' ? '<div class="faint">Ca đã kết thúc, không gửi thêm cập nhật được.</div>' : `
+        <div class="field"><label for="upType">Loại cập nhật</label>
+          <select id="upType">
+            <option value="meal">Bữa ăn</option>
+            <option value="activity">Hoạt động</option>
+            <option value="note">Ghi chú chung</option>
+          </select></div>
+        <div class="field"><label for="upText">Nội dung</label>
+          <textarea id="upText" placeholder="Ví dụ: ông đã ăn hết bát cháo, tinh thần vui vẻ"></textarea></div>
+        <div class="row" style="gap:10px">
+          <button class="btn btn-teal btn-sm" onclick="sendUpdate()">Gửi cập nhật</button>
+          <button class="btn btn-ghost btn-sm" onclick="addVital()">Ghi chỉ số sinh tồn</button>
+        </div>`}
+      </div>
+
+      <!-- Dòng thời gian -->
+      <div class="card">
+        <div class="card-head"><h3>Đã gửi trong ca</h3></div>
+        ${b.updates.length ? `<div class="timeline">${b.updates.map(u => `
+          <div class="tl-item ${u.type}">
+            <div class="tl-time">${fmtTime(u.created_at)}</div>
+            <div class="tl-body">${esc(u.content)}</div>
+          </div>`).join('')}</div>` :
+          '<div class="faint">Chưa gửi cập nhật nào. Gia đình rất mong được biết tình hình.</div>'}
+      </div>
+    </div>
+
+    ${b.status === 'completed' ? `
+      <div class="card">
+        <div class="card-head"><h3>Báo cáo cuối ca</h3></div>
+        <div class="grid-3">
+          <div class="stat"><div class="lbl">Đầu việc hoàn thành</div><div class="val teal">${b.task_done}/${b.task_total}</div></div>
+          <div class="stat"><div class="lbl">Cập nhật đã gửi</div><div class="val">${b.updates.length}</div></div>
+          <div class="stat"><div class="lbl">Tiền công ca này</div><div class="val">${fmtMoney(b.total_amount)}</div></div>
+        </div>
+      </div>` : ''}
+  </div>`;
+}
+
+/* ===================== HÀNH ĐỘNG ===================== */
+
+async function toggleTask(taskId, done) {
+  try {
+    await api.put(`/bookings/${bookingId}/tasks/${taskId}`, { done });
+    booking = await api.get(`/bookings/${bookingId}`);
+    render();
+  } catch (e) { toast(e.message); }
+}
+
+function addTask() {
+  const m = openModal(`
+    <h3>Thêm việc phát sinh</h3>
+    <p class="modal-sub">Việc này cũng hiện trong báo cáo gửi gia đình.</p>
+    <div class="field"><label>Tên công việc</label><input type="text" id="t" placeholder="Đưa ông đi khám răng"></div>
+    <div class="field"><label>Giờ dự kiến</label><input type="time" id="tm"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-bg').close()">Huỷ</button>
+      <button class="btn btn-primary" id="ok">Thêm</button>
+    </div>`);
+  m.querySelector('#ok').onclick = async () => {
+    const title = m.querySelector('#t').value.trim();
+    if (!title) return toast('Cần nhập tên công việc');
+    m.close();
+    await api.post(`/bookings/${bookingId}/tasks`, { title, due_time: m.querySelector('#tm').value || null });
+    booking = await api.get(`/bookings/${bookingId}`);
+    render();
+  };
+}
+
+async function sendUpdate() {
+  const content = document.getElementById('upText').value.trim();
+  if (!content) return toast('Nhập nội dung cập nhật');
+  try {
+    await api.post(`/bookings/${bookingId}/updates`, {
+      type: document.getElementById('upType').value, content
+    });
+    booking = await api.get(`/bookings/${bookingId}`);
+    render();
+    toast('Đã gửi cập nhật cho gia đình');
+  } catch (e) { toast(e.message); }
+}
+
+function addVital() {
+  const m = openModal(`
+    <h3>Ghi chỉ số sinh tồn</h3>
+    <p class="modal-sub">Chỉ số sẽ hiện ngay trên màn hình của gia đình.</p>
+    <div class="field-row">
+      <div class="field"><label>Huyết áp tâm thu</label><input type="number" id="sys" placeholder="130"></div>
+      <div class="field"><label>Huyết áp tâm trương</label><input type="number" id="dia" placeholder="80"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Nhịp tim</label><input type="number" id="hr" placeholder="75"></div>
+      <div class="field"><label>Nhiệt độ (°C)</label><input type="number" step="0.1" id="temp" placeholder="36.5"></div>
+    </div>
+    <div class="field"><label>Ghi chú</label><input type="text" id="note" placeholder="Tình trạng lúc đo"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-bg').close()">Huỷ</button>
+      <button class="btn btn-teal" id="ok">Lưu chỉ số</button>
+    </div>`);
+  m.querySelector('#ok').onclick = async () => {
+    const num = (id) => { const v = m.querySelector('#' + id).value; return v ? Number(v) : null; };
+    const body = {
+      booking_id: Number(bookingId),
+      systolic: num('sys'), diastolic: num('dia'),
+      heart_rate: num('hr'), temperature: num('temp'),
+      note: m.querySelector('#note').value.trim() || null
+    };
+    if (!body.systolic && !body.heart_rate && !body.temperature) return toast('Nhập ít nhất một chỉ số');
+    m.close();
+    try {
+      await api.post(`/elders/${booking.elder_id}/vitals`, body);
+      booking = await api.get(`/bookings/${bookingId}`);
+      render();
+      toast('Đã ghi chỉ số');
+    } catch (e) { toast(e.message); }
+  };
+}
+
+async function startShift() {
+  await api.put(`/bookings/${bookingId}/status`, { status: 'in_progress' });
+  toast('Đã bắt đầu ca. Bật chia sẻ vị trí để gia đình yên tâm.');
+  await load();
+  toggleGPS();
+}
+
+async function endShift() {
+  const undone = booking.tasks.filter(t => !t.done).length;
+  const m = openModal(`
+    <h3>Kết thúc ca làm?</h3>
+    <p class="modal-sub">${undone
+      ? `Còn ${undone} đầu việc chưa tick hoàn thành. Báo cáo gửi gia đình sẽ ghi nhận đúng như vậy.`
+      : 'Tất cả đầu việc đã hoàn thành. Báo cáo sẽ được gửi tới gia đình.'}</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-bg').close()">Quay lại</button>
+      <button class="btn btn-primary" id="ok">Kết thúc ca</button>
+    </div>`);
+  m.querySelector('#ok').onclick = async () => {
+    m.close();
+    stopGPS();
+    await api.put(`/bookings/${bookingId}/status`, { status: 'completed' });
+    toast('Đã kết thúc ca và gửi báo cáo cho gia đình');
+    await load();
+  };
+}
+
+/* ---------- chia sẻ vị trí ---------- */
+
+function toggleGPS() {
+  if (gpsWatch) return stopGPS();
+  if (!navigator.geolocation) return toast('Thiết bị không hỗ trợ định vị');
+
+  gpsWatch = navigator.geolocation.watchPosition(
+    async (pos) => {
+      try {
+        await api.post(`/bookings/${bookingId}/tracking`, {
+          lat: pos.coords.latitude, lng: pos.coords.longitude
+        });
+      } catch { /* mất mạng tạm thời thì bỏ qua, lần sau gửi lại */ }
+    },
+    () => { toast('Không lấy được vị trí. Kiểm tra quyền truy cập định vị.'); stopGPS(); },
+    { enableHighAccuracy: true, maximumAge: 30000 }
+  );
+  toast('Đang chia sẻ vị trí với gia đình');
+  render();
+}
+
+function stopGPS() {
+  if (gpsWatch) navigator.geolocation.clearWatch(gpsWatch);
+  gpsWatch = null;
+  render();
+}
+
+window.addEventListener('beforeunload', stopGPS);
+
+load().catch(e => {
+  document.getElementById('body').innerHTML = `<div class="alert alert-error">${esc(e.message)}</div>`;
+});
+</script>
+</body>
+</html>
